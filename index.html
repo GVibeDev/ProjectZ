@@ -1,0 +1,46 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#101c29"><title>PROJECT Z — WEB PLAYTEST RC1</title><link rel="icon" href="data:,"><style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:#0c151e;color:#b5c1bd;font-family:monospace}body{display:flex;align-items:center;justify-content:center;flex-direction:column;overflow:hidden}canvas{image-rendering:pixelated;image-rendering:crisp-edges;display:block;outline:1px solid #405461;box-shadow:0 14px 70px #0008;touch-action:none}footer{font-size:11px;letter-spacing:1px;margin:14px 8px 0;text-align:center;line-height:1.7;color:#8ba09f}button{background:none;border:1px solid #405461;color:#cfcdb2;font:inherit;padding:3px 9px;cursor:pointer}#loading{position:absolute;background:#101c29;padding:20px;font-size:13px}footer{margin:8px 4px 0;letter-spacing:0;line-height:1.3;max-width:95vw}footer .hint{font-size:10px}button{touch-action:manipulation;min-height:30px}#touch-controls{display:none;position:fixed;bottom:max(10px,env(safe-area-inset-bottom));left:12px;right:12px;justify-content:space-between;align-items:center;pointer-events:none;user-select:none}body.touch-enabled{padding-bottom:128px}body.touch-enabled #touch-controls{display:flex}#stick{pointer-events:auto;touch-action:none;width:104px;height:104px;border-radius:50%;border:2px solid #748c91;background:#101c29dc;display:grid;place-items:center}#stick span{width:42px;height:42px;border-radius:50%;background:#86c4c9;pointer-events:none}.touch-buttons{pointer-events:auto;display:grid;grid-template-columns:repeat(2,58px);gap:6px}.touch-buttons button{height:47px;background:#101c29e8;border-radius:12px;touch-action:none;font-size:11px}#fire{grid-column:span 2;background:#274750}body.touch-enabled footer .hint{display:none}@media(orientation:landscape){body.touch-enabled{padding-bottom:0}#touch-controls{top:50%;bottom:auto;transform:translateY(-50%)}}body.full footer{display:block}
+#game-frame{position:relative}#intro-video,#boot-gate{position:absolute;inset:0;width:100%;height:100%;z-index:5}#intro-video{object-fit:contain;pointer-events:none;background:#000}#boot-gate{background:#0a1018;display:grid;place-content:center;text-align:center;gap:16px;color:#e2dbc0;font:16px monospace}#boot-gate small{font-size:11px;color:#86c4c9}#boot-gate[hidden]{display:none}#boot-gate.waiting-video{background:#000;pointer-events:none}#boot-gate.waiting-video>*{visibility:hidden}body.booting #game-frame:after{content:"";position:absolute;inset:0;background:#000;z-index:4;pointer-events:none}#skip-intro{position:absolute;right:8px;bottom:8px;z-index:6;background:#0a1018bb;font-size:11px}.presenting footer,.presenting #touch-controls{visibility:hidden}#loading{z-index:7}body.booting footer,body.booting #touch-controls{visibility:hidden}
+#fighter-down-video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#07131d;z-index:5;pointer-events:none}body.fighter-down-mode{padding-bottom:0}body.fighter-down-mode #touch-controls{display:none}body.fighter-down-mode footer #stage-button,body.fighter-down-mode footer #music-button,body.fighter-down-mode footer #practice-button,body.fighter-down-mode footer #auto,body.fighter-down-mode footer #replay-intro,body.fighter-down-mode footer [data-tap="F1"],body.fighter-down-mode footer a{display:none}body.fighter-down-mode footer .hint{display:block}
+#ending-video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;z-index:8}#ending-controls{position:absolute;right:8px;bottom:8px;z-index:9;display:flex;gap:6px}#ending-controls button{background:#07131ddb;color:#e2dbc0;min-height:32px}.ending-mode footer,.ending-mode #touch-controls{visibility:hidden}
+</style></head><body class="booting"><div id="loading">Loading PNG assets...</div><div id="game-frame"><div id="boot-gate" hidden><span>PRESS / TAP TO START</span><small>KEYBOARD / GAMEPAD / TOUCH</small></div><button id="skip-intro" hidden>SKIP</button><canvas id="game" width="320" height="240" tabindex="0" aria-label="Project Z. Controls are shown in the menus. Options Controls configures bindings. F10 recovery; mouse Back remains available."></canvas></div><footer><button id="replay-intro" hidden>REPLAY INTRO</button> <button id="start">START</button> <button id="stage-button" data-tap="KeyQ">STAGE 01</button> <button id="music-button" data-tap="KeyL" hidden>MUSIC PLAYER</button> <button id="practice-button" data-tap="F2">PRACTICE</button> <button id="auto" data-tap="KeyF" aria-pressed="false">AUTO OFF</button> <button id="auto-p2" data-tap="Numpad3" hidden>AUTO P2 OFF</button> <button data-tap="KeyP">PAUSE</button> <button id="title-button" data-tap="KeyR" hidden>TITLE</button> <button data-tap="F1">HELP</button> <button data-tap="KeyM">AUDIO</button> <button id="full">FULL SCREEN</button> <button id="touch-toggle">TOUCH</button><br><span class="hint">ARROWS/WASD MOVE Ãƒâ€šÃ‚Â· SPACE FIRE Ãƒâ€šÃ‚Â· X SUPPORT Ãƒâ€šÃ‚Â· C BOMB Ãƒâ€šÃ‚Â· SHIFT FOCUS Ãƒâ€šÃ‚Â· F AUTO</span> <span id="pad-status">PAD: PRESS A BUTTON</span></footer>
+<div id="touch-controls" aria-label="Touch controls"><div id="stick" role="group" aria-label="Drag to move"><span></span></div><div class="touch-buttons"><button id="fire" data-hold="Space">FIRE</button><button data-hold="KeyX">SUPPORT</button><button data-hold="KeyC">BOMB</button><button data-hold="ShiftLeft">FOCUS</button><button data-tap="KeyP">PAUSE</button></div></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script src="game.js"></script></body></html>
