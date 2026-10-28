@@ -13,6 +13,8 @@
   'use strict';
 
   const images = Object.freeze({
+      "ui/memory_c1/symbols": "assets/graphics/ui/archive/memory_symbols_c1.png",
+      "ui/memory_c1/text": "assets/graphics/ui/archive/ava_memory_12_c1.png",
       "ui/ux_icon_weapons": "assets/graphics/ui/PZ_UX_icon.png",
       "ui/ux_icon_upper": "assets/graphics/ui/PZ_UX_icon_upper.png",
       "ui/ux_icon_lower": "assets/graphics/ui/PZ_UX_icon_lower.png",
@@ -7611,7 +7613,7 @@ MARE.musicTrackGain = {
         ship.inv = Math.max(1.5, ship.inv);
         this.fx(p.x, p.y, 1.25, 'burst');
         if (this.progressEligible && this.runMode === 'normal') this.progress.recoverMemory(this.stage.def.id, p.memoryId || 'memory_1');
-        this.message('MEMORY I RECOVERED', 3);
+        this.message((M.MemoryC1?.byStage(this.stage.def.id)?.name || 'MEMORY 01') + ' RECOVERED', 3);
       }
     }
     upgradeGun() {
@@ -94454,7 +94456,7 @@ MARE.DreadnoughtArmHitboxes = {
     const total = g.practice ? g.stats.spawned : def.timeline.length,
       percent = Math.floor(g.stats.mobKills / Math.max(1, total) * 100),
       memory = g.progress.memoryRecovered(def.id, 'memory_1');
-    const metrics = [['SCORE', Math.floor(g.score)], ['SHIPS / HITS', p.lives + ' / ' + g.stats.hits], ['DESTROYED', g.stats.mobKills + '/' + total + ' ' + percent + '%'], ['DESTRUCTION BONUS', g.stats.destructionBonus], ['MEMORY I', memory ? 'RECOVERED' : '---']];
+    const metrics = [['SCORE', Math.floor(g.score)], ['SHIPS / HITS', p.lives + ' / ' + g.stats.hits], ['DESTROYED', g.stats.mobKills + '/' + total + ' ' + percent + '%'], ['DESTRUCTION BONUS', g.stats.destructionBonus], [M.MemoryC1?.byStage(def.id)?.name || 'MEMORY 01', memory ? 'RECOVERED' : '---']];
     for (const [n, [label, value]] of metrics.entries()) {
       M.text(c, label, 207, 35 + n * 28);
       M.text(c, value, 207, 44 + n * 28);
@@ -94756,8 +94758,10 @@ MARE.DreadnoughtArmHitboxes = {
     internalTab: 0,
     hover: null
   });
-  A.entries = (g, category = A.state(g).category) => category === 'bosses' ? M.menuBosses() : M.menuHostiles();
-  A.flags = (g, e) => M.menuArchiveFlags(g.progress, e, A.state(g).category === 'bosses');
+  A.entries = (g, category = A.state(g).category) => category === 'memories' ? M.MemoryC1.entries : category === 'bosses' ? M.menuBosses() : M.menuHostiles();
+  A.flags = (g, e) => A.state(g).category === 'memories' ? {
+    encountered: M.MemoryC1.recovered(g.progress, e)
+  } : M.menuArchiveFlags(g.progress, e, A.state(g).category === 'bosses');
   A.owns = g => ['menu_archive', 'menu_boss_dossier', 'menu_hostile_dossier'].includes(g.state);
   A.open = function (g) {
     const parentFocus = g.state === 'menu_run_history_r3s' ? g.archiveUI?.focusIndex || 0 : 0;
@@ -94838,7 +94842,7 @@ MARE.DreadnoughtArmHitboxes = {
       g.state = 'menu_archive';
     } else if (s.screen === 'list') {
       s.screen = 'landing';
-      s.focusIndex = s.category === 'bosses' ? 1 : 0;
+      s.focusIndex = ['hostiles', 'bosses', 'memories'].indexOf(s.category);
       g.state = 'menu_archive';
     } else {
       g.archiveUI = null;
@@ -94885,7 +94889,7 @@ MARE.DreadnoughtArmHitboxes = {
   A.draw = function (c, g) {
     const s = A.state(g);
     A.controls = [];
-    UI.header(c, s.screen === 'landing' ? 'ARCHIVE' : 'ARCHIVE / ' + s.category.toUpperCase());
+    UI.header(c, s.screen === 'landing' ? 'ARCHIVE' : 'ARCHIVE / ' + (s.category === 'memories' ? 'MEMORY' : s.category.toUpperCase()));
     if (s.screen === 'landing') {
       ['hostiles', 'bosses'].forEach((id, n) => {
         const e = A.entries(g, id),
@@ -94906,9 +94910,9 @@ MARE.DreadnoughtArmHitboxes = {
           focused = A.controls.length === s.focusIndex;
         UI.draw(c, f.encountered ? 'hostile_entry' : 'hostile_locked', x, y);
         if (f.encountered) {
-          if (s.category === 'bosses') M.drawBossHero09(c, g, e.kind, x + 4, y + 5, 32, 29);else UI.preview(c, e.asset, x + 4, y + 5, 32, 29);
+          if (s.category === 'memories') M.MemoryC1.drawSymbol(c, e, x + 12, y + 12);else if (s.category === 'bosses') M.drawBossHero09(c, g, e.kind, x + 4, y + 5, 32, 29);else UI.preview(c, e.asset, x + 4, y + 5, 32, 29);
         }
-        M.text(c, f.encountered ? e.name.slice(0, 16) : 'DATA LOCKED', x + 40, y + 9);
+        M.text(c, s.category === 'memories' ? e.name : f.encountered ? e.name.slice(0, 16) : 'DATA LOCKED', x + 40, y + 9);
         M.text(c, 'SECTOR ' + M.STAGES[e.stage].number, x + 40, y + 24);
         const ctl = {
           id: 'entry_' + index,
@@ -94938,8 +94942,9 @@ MARE.DreadnoughtArmHitboxes = {
     A.validFocus(g);
   };
   A.card = function (c, g, boss) {
-    const s = A.state(g),
-      e = g.archiveEntry,
+    const s = A.state(g);
+    if (s.category === 'memories') return M.MemoryC1.drawCard(c, g, A);
+    const e = g.archiveEntry,
       f = M.menuArchiveFlags(g.progress, e, boss),
       known = f.encountered,
       stats = known && boss ? M.menuBossStats(e.kind) : null;
@@ -95064,7 +95069,7 @@ MARE.DreadnoughtArmHitboxes = {
       if (s.screen === 'entry' && s.category === 'bosses') {
         s.internalTab = 1 - s.internalTab;
         this.bossDossierPage = s.internalTab;
-      } else if (s.screen === 'list') A.category(this, s.category === 'bosses' ? 'hostiles' : 'bosses');
+      } else if (s.screen === 'list') A.category(this, ['hostiles', 'bosses', 'memories'][(['hostiles', 'bosses', 'memories'].indexOf(s.category) + 1) % 3]);
     }
     if (i.tap('Enter') || i.tap('Space')) UI.confirm(this);
   };
@@ -95111,7 +95116,7 @@ MARE.DreadnoughtArmHitboxes = {
     addCap: 1.25
   };
   const MP = M.Multiplayer = {
-    version: 'WEB-PLAYTEST-RC3-PASS-B',
+    version: 'WEB-C1-MEMORY-CANDIDATE',
     serial: 0
   };
   M.worldGame = g => g?.__mpWorld || g;
@@ -96545,6 +96550,10 @@ MARE.DreadnoughtArmHitboxes = {
       });
       start = end;
     }
+    events.push({
+      type: 'memory_c1',
+      t: blocks[1].start + 4
+    });
     if (id === 'STAGE_04') for (const s of segments) events.push({
       t: s.t,
       type: 'canyon_segment',
@@ -96764,6 +96773,10 @@ MARE.DreadnoughtArmHitboxes = {
       }
       while (this.eventIndex < this.def.events.length && this.def.events[this.eventIndex].t <= this.time + 1e-8) {
         const e = this.def.events[this.eventIndex++];
+        if (e.type === 'memory_c1') {
+          M.MemoryC1.spawn(this, g);
+          continue;
+        }
         if (e.phase) this.setSurfacePhase(e.phase);
         if (e.chapter) this.chapter = e.chapter;
         if (e.type === 'transit') this.surface?.startTransit(e.asset, 131, -200, 36);
@@ -101049,6 +101062,11 @@ MARE.WaveAuthoring12 = {
         queue12: true
       });
     }
+    if (id === 'STAGE_02') events.push({
+      type: 'memory_c1',
+      t: q.phases[1].start + 4,
+      eventId12: 'memory_c1_stage2'
+    });
     for (let i = 0; i < 3; i++) {
       const source = old.events.filter(e => e.t < old.bossSequence[i].t + 1e-8 && e.t > old.bossSequence[i].t - 10 && e.type !== 'boss');
       for (const e of source) events.push({
@@ -101214,6 +101232,10 @@ MARE.WaveAuthoring12 = {
         const key = e.eventId12 || this.def.events.indexOf(e);
         if (this.eventLedger12.has(key)) continue;
         this.eventLedger12.add(key);
+        if (e.type === 'memory_c1') {
+          M.MemoryC1.spawn(this, g);
+          continue;
+        }
         if (e.chapter) this.chapter = e.chapter;
         if (e.message) {
           if (e.warning12 || g.msgTime <= 0) g.message(e.message, e.duration || 2);else g.systemCues.push({
@@ -105542,8 +105564,8 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
     if (s.screen !== 'landing') return archiveDraw(c, g);
     A.controls = [];
     UI.header(c, 'ARCHIVE');
-    ['hostiles', 'bosses'].forEach((id, n) => A.control(c, g, id, id.toUpperCase(), 72, 53 + n * 49, 176, 27, () => A.category(g, id)));
-    A.control(c, g, 'run_history', 'RUN HISTORY', 72, 151, 176, 27, () => U.history(g));
+    ['hostiles', 'bosses', 'memories'].forEach((id, n) => A.control(c, g, id, id === 'memories' ? 'MEMORY' : id.toUpperCase(), 72, 48 + n * 38, 176, 27, () => A.category(g, id)));
+    A.control(c, g, 'run_history', 'RUN HISTORY', 72, 162, 176, 27, () => U.history(g));
     A.control(c, g, 'back', 'BACK', 110, 213, 100, 20, () => A.back(g));
     A.validFocus(g);
   };
@@ -105811,7 +105833,134 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
   };
 })(MARE);
 
-;(function(M){M.version='Project Z 10.0.37 / Pre-release Pass A & B';M.WebRelease=Object.freeze({"id":"10.0.37-WEB","version":"10.0.37","baseline":"10.0.37","baselineFingerprint":"65b8f89a4a5207c17a799e13562f06e8f2483beb399bb815302f160f35e18055","approvedCandidateFingerprint":"c3f9027ffb725e38ec142e308ee0407c8ccfca528b31cef98931403843f50338","approvedRuntimeCommit":"8c2782e652a9caceee0e738dad78e70bf23d6ed1","previousOfficialBaseline":"10.0.36","status":"OFFICIAL_DESIGNER_VALIDATED","passA":"VALIDATED","passB":"VALIDATED"});M.Multiplayer.version='10.0.37-WEB';})(MARE);
+;
+"use strict";
+
+(function (M) {
+  'use strict';
+
+  const C = M.MemoryC1 = {
+    entries: [{
+      "kind": "memory_01",
+      "name": "MEMORY 01",
+      "stage": "STAGE_01",
+      "memoryId": "memory_1",
+      "frame": 0,
+      "symbol": "semicircle_rays",
+      "sentences": ["The hour of awakening has come.", "Once more, the long dream draws to a close."]
+    }, {
+      "kind": "memory_02",
+      "name": "MEMORY 02",
+      "stage": "STAGE_02",
+      "memoryId": "memory_1",
+      "frame": 1,
+      "symbol": "three_waves",
+      "sentences": ["Above us, aeons have passed.", "Yet all that we were remains."]
+    }, {
+      "kind": "memory_03",
+      "name": "MEMORY 03",
+      "stage": "STAGE_03",
+      "memoryId": "memory_1",
+      "frame": 2,
+      "symbol": "broken_shield",
+      "sentences": ["Never has a civilisation resisted for so long.", "Yet the end shall be the same."]
+    }, {
+      "kind": "memory_04",
+      "name": "MEMORY 04",
+      "stage": "STAGE_04",
+      "memoryId": "memory_1",
+      "frame": 3,
+      "symbol": "vessel",
+      "sentences": ["Even the harvest may resist.", "This world shall be ours once more."]
+    }, {
+      "kind": "memory_05",
+      "name": "MEMORY 05",
+      "stage": "STAGE_05",
+      "memoryId": "memory_1",
+      "frame": 4,
+      "symbol": "flame",
+      "sentences": ["We believed we knew all that we had allowed to grow.", "Yet something has arisen beyond our reckoning."]
+    }]
+  };
+  C.byStage = id => C.entries.find(e => e.stage === id) || null;
+  C.recovered = (progress, e) => progress.memoryRecovered(e.stage, e.memoryId);
+  M.assetInfo['ui/memory_c1/symbols'] = {
+    w: 16,
+    h: 16,
+    frames: 5,
+    anchor: {
+      x: 0,
+      y: 0
+    },
+    fps: 0,
+    emit: null,
+    groups: ['MENU']
+  };
+  M.assetInfo['ui/memory_c1/text'] = {
+    w: 274,
+    h: 112,
+    frames: 5,
+    rects: C.entries.map((e, n) => [0, n * 112, 274, 112]),
+    anchor: {
+      x: 0,
+      y: 0
+    },
+    fps: 0,
+    emit: null,
+    groups: ['MENU']
+  };
+  M.assetGroups.MENU.push('ui/memory_c1/symbols', 'ui/memory_c1/text');
+  if (!M.assetGroups.COMMON.includes('enemies/seed')) M.assetGroups.COMMON.push('enemies/seed');
+  if (!M.assetInfo['enemies/seed'].groups.includes('COMMON')) M.assetInfo['enemies/seed'].groups.push('COMMON');
+  C.spawn = function (stage, g) {
+    g = M.worldGame(g);
+    if (g.practice || g.runMode !== 'normal' || stage.def.id === 'STAGE_01' || !C.byStage(stage.def.id)) return null;
+    let x = 45;
+    const y = 28;
+    if (stage.def.id === 'STAGE_04') {
+      const bounds = stage.canyon.bounds(y);
+      x = M.clamp(x, bounds[0] + 24, bounds[1] - 24);
+    }
+    const e = g.enemies.spawn('seed', x, y, 0, '', {
+      behavior: {
+        seed12: true
+      }
+    });
+    if (!e) throw Error('Memory C1 carrier pool refused ' + stage.def.id);
+    const cue = M.STAGES.STAGE_01.events.find(e => e.message === 'SIGNAL ON THE LEFT - BREAK THE CASING'),
+      text = cue.message,
+      duration = cue.duration || 2;
+    if (g.msgTime <= 0) g.message(text, duration);else g.systemCues.push({
+      text,
+      duration
+    });
+    return e;
+  };
+  C.drawSymbol = function (c, entry, x, y) {
+    const im = M.assets['ui/memory_c1/symbols'];
+    if (im) c.drawImage(im, entry.frame * 16, 0, 16, 16, x, y, 16, 16);
+  };
+  C.drawCard = function (c, g, A) {
+    const e = g.archiveEntry,
+      known = C.recovered(g.progress, e),
+      UI = M.MenuUI;
+    A.controls = [];
+    UI.header(c, e.name);
+    UI.panel(c, 'frame_dossier', 10, 43, 300, 171);
+    M.text(c, e.name, 20, 54);
+    if (known) {
+      C.drawSymbol(c, e, 274, 53);
+      const im = M.assets['ui/memory_c1/text'];
+      if (im) c.drawImage(im, 0, e.frame * 112, 274, 112, 22, 86, 274, 112);
+    } else M.centerText(c, 'DATA LOCKED', 160, 117);
+    A.control(c, g, 'prev_entry', '< PREV', 12, 218, 78, 16, () => A.next(g, -1), A.neighbor(g, -1) < 0);
+    A.control(c, g, 'back', 'BACK TO LIST', 101, 218, 118, 16, () => A.back(g));
+    A.control(c, g, 'next_entry', 'NEXT >', 230, 218, 78, 16, () => A.next(g, 1), A.neighbor(g, 1) < 0);
+    A.validFocus(g);
+  };
+})(MARE);
+
+;(function(M){M.version='PROJECT Z — C1 MEMORY CANDIDATE';M.WebRelease=Object.freeze({id:'C1-MEMORY-CANDIDATE',baseline:'10.0.37-C1',officialParent:'10.0.37',baselineFingerprint:'3066db829be4ce9bd75e90cf66654e8fdb96617e8d3067c250e9d8ad2094914e',status:'NOT_DESIGNER_VALIDATED'});})(MARE);
 ;
 "use strict";
 
