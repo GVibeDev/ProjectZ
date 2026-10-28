@@ -105960,7 +105960,7 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
   };
 })(MARE);
 
-;(function(M){M.version='PROJECT Z — C1 MEMORY CANDIDATE';M.WebRelease=Object.freeze({id:'C1-MEMORY-CANDIDATE',baseline:'10.0.37-C1',officialParent:'10.0.37',baselineFingerprint:'3066db829be4ce9bd75e90cf66654e8fdb96617e8d3067c250e9d8ad2094914e',status:'NOT_DESIGNER_VALIDATED'});})(MARE);
+;(function(M){M.version='Project Z 10.0.38 / Memory & Archive Integration';M.WebRelease=Object.freeze({"id":"10.0.38-WEB","baseline":"10.0.38","version":"10.0.38","officialParent":"10.0.37","baselineFingerprint":"7364e419b136718dc831cb98d07910581cdabb898fb5bc0a8316d914f50f0c68","approvedCandidateFingerprint":"3066db829be4ce9bd75e90cf66654e8fdb96617e8d3067c250e9d8ad2094914e","approvedCandidateCommit":"e44f8ca3d80a4b90fbed9bf5482dde45fb9b22bb","approvedRuntimeCommit":"a8e995919c4919d264541994b3fbda228fb79bd8","status":"OFFICIAL_DESIGNER_VALIDATED"});M.Multiplayer.version='10.0.38-WEB';M.Multiplayer.build='PZ-10-1038-C1-VALIDATED-WEB';})(MARE);
 ;
 "use strict";
 
