@@ -105811,7 +105811,7 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
   };
 })(MARE);
 
-;(function(M){M.version='PROJECT Z — WEB PLAYTEST RC3 - PASS B CANDIDATE';M.WebRelease=Object.freeze({id:'RC3-PASS-B',baseline:'10.0.36-PRE-B',baselineFingerprint:'c3f9027ffb725e38ec142e308ee0407c8ccfca528b31cef98931403843f50338',officialParent:'10.0.36',status:'CANDIDATE_NOT_DESIGNER_VALIDATED'});})(MARE);
+;(function(M){M.version='Project Z 10.0.37 / Pre-release Pass A & B';M.WebRelease=Object.freeze({"id":"10.0.37-WEB","version":"10.0.37","baseline":"10.0.37","baselineFingerprint":"65b8f89a4a5207c17a799e13562f06e8f2483beb399bb815302f160f35e18055","approvedCandidateFingerprint":"c3f9027ffb725e38ec142e308ee0407c8ccfca528b31cef98931403843f50338","approvedRuntimeCommit":"8c2782e652a9caceee0e738dad78e70bf23d6ed1","previousOfficialBaseline":"10.0.36","status":"OFFICIAL_DESIGNER_VALIDATED","passA":"VALIDATED","passB":"VALIDATED"});M.Multiplayer.version='10.0.37-WEB';})(MARE);
 ;
 "use strict";
 
