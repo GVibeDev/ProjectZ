@@ -1,12 +1,12 @@
 {
-  "title": "PROJECT Z — WEB PLAYTEST RC1",
-  "rc": "RC1",
+  "title": "PROJECT Z — WEB PLAYTEST RC2",
+  "rc": "RC2",
   "status": "FROZEN_EXTERNAL_PLAYTEST",
-  "sourceVersion": "10.0.35",
-  "sourceFingerprint": "f4b94b5b3f9ff03af4bb1dee3bdbf5ffd1528f24dbe5add5c2e9f11d5e014d86",
-  "sourceRuntimeSHA256": "3114e2c08532e6d648373f8f0bc8d11eda62fb165465f1cef8c7f1ae5143e8c6",
-  "buildUTC": "2026-10-26T20:08:45.302576+00:00",
-  "payloadFingerprint": "d288bba298b79037c314df5040ac4a8b9f57b6b2d27e8d1c65411206ceac16de",
+  "sourceVersion": "10.0.36",
+  "sourceFingerprint": "3700a295f9a711e565bcbcbfab0d8ad986b81436cb45df9170eb9cd65935bfce",
+  "sourceRuntimeSHA256": "ae9e7d7a107ddb9df7b562c7f6dcfdda36120042ebd1410cd9dd069c57ee2fa2",
+  "buildUTC": "2026-10-28T09:12:54.156535+00:00",
+  "payloadFingerprint": "82b8b5b8068ef798d657b82b6fbfb47971114a193d6d7ce34bba2cb4e3af5154",
   "storageNamespace": "project-z-web-beta:",
   "multiplayer": "LOCAL_COUCH_COOP_ONLY"
 }

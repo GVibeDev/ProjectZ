@@ -13,6 +13,9 @@
   'use strict';
 
   const images = Object.freeze({
+      "ui/ux_icon_weapons": "assets/graphics/ui/PZ_UX_icon.png",
+      "ui/ux_icon_upper": "assets/graphics/ui/PZ_UX_icon_upper.png",
+      "ui/ux_icon_lower": "assets/graphics/ui/PZ_UX_icon_lower.png",
       "stage5/projectiles/overlord_energy_sphere_e1": "assets/graphics/stages/stage05/projectiles/overlord_energy_sphere_e1.png",
       "stage5/projectiles/overlord_energy_sphere_e1_emit": "assets/graphics/stages/stage05/projectiles/overlord_energy_sphere_e1_emit.png",
       "stage5/bosses/boss_z_overlord_original_s5b1": "assets/graphics/stages/stage05/bosses/boss_z_overlord_original_s5b1.png",
@@ -3426,6 +3429,16 @@ MARE.assetGroups = {
   "STAGE_01": ["enemies/drone_emit", "enemies/drone", "bosses/dredger", "bosses/warden", "bosses/crystal_parasite_emit", "bosses/crystal_parasite", "backgrounds/sky", "backgrounds/reef", "backgrounds/giant", "backgrounds/foreground", "enemies/fish", "enemies/sail", "enemies/larva", "enemies/parasite", "enemies/spitter", "enemies/seed"],
   "STAGE_02": ["backgrounds/zatm_surface_p1_far", "backgrounds/zatm_cloud_mid_a_light", "backgrounds/zatm_cloud_mid_b_light", "backgrounds/zatm_cloud_front_light", "backgrounds/zatm_surface_p2_mid", "backgrounds/zatm_cloud_mid_a_medium", "backgrounds/zatm_cloud_mid_b_dense", "backgrounds/zatm_cloud_front_medium", "backgrounds/zatm_surface_p3_near", "backgrounds/zatm_cloud_mid_a_thin", "backgrounds/zatm_cloud_mid_b_sparse", "backgrounds/zatm_cloud_front_fastwisps", "enemies/z2_drone", "enemies/z2_drone_emit", "enemies/z2_vela", "enemies/z2_shield", "enemies/z2_shield_emit", "enemies/z2_gunner", "enemies/z2_gunner_emit", "enemies/z2_scarabite", "enemies/z2_artillery", "enemies/z2_artillery_emit", "bullets/z2_gunner_needle", "bullets/z2_gunner_needle_emit", "bullets/z2_artillery_shell", "bullets/z2_artillery_shell_emit", "bullets/z2_artillery_shell_impact", "bullets/z2_artillery_shell_impact_emit", "effects/z2_artillery_shell_impact", "effects/z2_artillery_shell_impact_emit", "bosses/z2_boss_orbital_probe", "bosses/z2_boss_orbital_probe_emit", "bosses/z2_boss_crystal_frigate", "bosses/z2_boss_crystal_frigate_emit", "bosses/z2_boss_crystal_dreadnought", "bosses/z2_boss_crystal_dreadnought_emit", "bosses/z2_orbital_probe_core", "bosses/z2_orbital_probe_core_emit", "bosses/z2_crystal_frigate_laser_emitter", "bosses/z2_crystal_frigate_laser_emitter_emit", "bosses/z2_crystal_dreadnought_core", "bosses/z2_crystal_dreadnought_core_emit", "bosses/z2_boss_gunner_hardpoint", "bosses/z2_boss_gunner_hardpoint_emit", "bosses/z2_boss_artillery_hardpoint", "bosses/z2_boss_artillery_hardpoint_emit", "bosses/z2_orbital_probe_scarabite_bay", "bosses/z2_orbital_probe_scarabite_bay_emit", "bosses/z2_crystal_dreadnought_sword_arm", "bosses/z2_crystal_dreadnought_sword_arm_emit", "bosses/z2_crystal_dreadnought_cannon_arm", "bosses/z2_crystal_dreadnought_cannon_arm_emit", "effects/z2_dreadnought_sword_arc", "effects/z2_dreadnought_sword_arc_emit", "effects/z2_boss_laser_muzzle", "effects/z2_boss_laser_muzzle_emit"]
 };
+for (const half of ['upper', 'lower', 'weapons']) {
+  const key = 'ui/ux_icon_' + half;
+  MARE.assetInfo[key] = {
+    w: 5,
+    h: 6,
+    frames: 4,
+    rects: [0, 1, 2, 3].map(n => [2 + n * 7, 2, 5, 6])
+  };
+  MARE.assetGroups.COMMON.push(key);
+}
 
 ;
 "use strict";
@@ -3772,6 +3785,7 @@ MARE.musicTrackGain = {
       return codes.some(k => this.keys[k] || this.padKeys[k] || this.touchKeys[k]);
     }
     tap(k) {
+      if (M.game?.state === 'over' && ['Enter', 'Space'].includes(k) && M.ControlsR2A?.continueReady && !M.ControlsR2A.continueReady(M.game)) return false;
       return !!this.pressed[k];
     }
     end() {
@@ -3931,9 +3945,38 @@ MARE.musicTrackGain = {
     NumpadAdd: 'NUM +',
     NumpadSubtract: 'NUM -'
   })[k] || k.replace(/^Key/, '').replace(/^Digit/, '').replace(/^Numpad/, 'NUM ');
-  C.label = (kind, profile, action, all = false) => {
-    const a = C.bindings[kind]?.[profile]?.[action] || [];
-    return (all ? a : a.slice(0, 1)).map(v => kind === 'gamepad' ? 'BTN' + v : C.keyName(v)).join('/') || '-';
+  C.promptPad = function (g, profile) {
+    if (!g) return null;
+    if (profile === 'game') return C.resolve(g, g.session?.localSlot || 0);
+    return C.pads().find(p => p.index === g.input?.lastPadR2A) || C.pads()[0] || null;
+  };
+  const standardButtonsA = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'VIEW', 'START', 'LS', 'RS', 'D-UP', 'D-DOWN', 'D-LEFT', 'D-RIGHT', 'GUIDE'];
+  C.label = (kind, profile, action, all = false, pad = null) => {
+    const a = C.bindings[kind]?.[profile]?.[action] || [],
+      device = pad || C.promptPad(M.game, profile);
+    return (all ? a : a.slice(0, 1)).map(v => kind === 'gamepad' ? device?.mapping === 'standard' && standardButtonsA[v] || 'BTN ' + v : C.keyName(v)).join('/') || '-';
+  };
+  C.openContinue = function (g) {
+    g.continueGuardA = {
+      opened: performance.now(),
+      kind: Number.isInteger(g.mpDevices?.[g.session?.localSlot || 0]) ? 'gamepad' : 'keyboard',
+      slot: g.session?.localSlot || 0
+    };
+    g.input.clear();
+    for (const p of g.players || []) if (p.input !== g.input) p.input?.clear();
+  };
+  C.continueReady = g => g.state !== 'over' || !!g.continueGuardA && performance.now() - g.continueGuardA.opened >= 1000;
+  C.continueLabel = function (g, a) {
+    const s = g.continueGuardA;
+    if (!s) return C.menuLabel(g, a);
+    const action = s.kind === 'gamepad' && a === 'quit' ? 'back' : a;
+    return C.label(s.kind, 'menu', action, false, s.kind === 'gamepad' ? C.resolve(g, s.slot) : null);
+  };
+  C.shoulderTabA = function (g, button) {
+    if (!g.equipmentHeaderR2B) return false;
+    const pad = C.promptPad(g, 'menu');
+    if (pad?.mapping !== 'standard' || !g.input.padEdgesR2A[pad.index + ':' + button]) return false;
+    return !Object.entries(C.bindings.gamepad.menu).some(([action, list]) => !['previous', 'next'].includes(action) && list.includes(button));
   };
   C.storageKey = new URLSearchParams(location.search).get('debug') === '1' ? 'project-z-test-lab:project-z-controls-v1' : 'project-z-controls-v1';
   C.load = function () {
@@ -4124,6 +4167,8 @@ MARE.musicTrackGain = {
     if (!i.rawKeysR2A) return;
     const ctx = C.context(g);
     if (i.inputContextR2A !== ctx) {
+      if (g.state === 'over' && !g.continueGuardA) C.openContinue(g);
+      if (g.state !== 'over') g.continueGuardA = null;
       for (const [k, v] of Object.entries(i.previousKeysR2A)) if (v && i.rawKeysR2A[k]) i.blockKeysR2A.add(k);
       for (const [k, v] of Object.entries(i.rawPadsR2A)) if (v) i.blockPadsR2A.add(k);
       i.inputContextR2A = ctx;
@@ -4135,6 +4180,7 @@ MARE.musicTrackGain = {
       if (current[k] && !i.rawPadsR2A[k]) {
         i.padEdgesR2A[k] = true;
         i.lastDeviceR2A = 'gamepad';
+        i.lastPadR2A = p.index;
       }
       if (!current[k]) i.blockPadsR2A.delete(k);
     });
@@ -7003,8 +7049,8 @@ MARE.musicTrackGain = {
       panel(c, 28, 68, 206, 107);
       M.centerText(c, 'SHIP LOST', 131, 81, 2);
       M.centerText(c, 'CONTINUES LEFT: ' + g.continues, 131, 109);
-      M.centerText(c, g.continues ? M.ControlsR2A ? M.ControlsR2A.menuLabel(g, 'confirm') + ' - CONTINUE' : 'ENTER - CONTINUE' : 'NO CONTINUES LEFT', 131, 127);
-      M.centerText(c, M.ControlsR2A ? M.ControlsR2A.menuLabel(g, 'quit') + ' - TITLE SCREEN' : 'R - TITLE SCREEN', 131, 148);
+      M.centerText(c, g.continues && !M.ControlsR2A.continueReady(g) ? 'RELEASE CONTROLS' : g.continues ? M.ControlsR2A ? M.ControlsR2A.continueLabel(g, 'confirm') + ' - CONTINUE' : 'ENTER - CONTINUE' : 'NO CONTINUES LEFT', 131, 127);
+      M.centerText(c, M.ControlsR2A ? M.ControlsR2A.continueLabel(g, 'quit') + ' - TITLE SCREEN' : 'R - TITLE SCREEN', 131, 148);
       M.centerText(c, 'CONTINUE RESETS YOUR SCORE', 131, 163);
     }
     if (g.state === 'clear') {
@@ -7642,6 +7688,7 @@ MARE.musicTrackGain = {
     gameOver() {
       if (M.godModeActive()) return false;
       this.state = this.practice ? 'practice_over' : 'over';
+      if (this.state === 'over') M.ControlsR2A?.openContinue(this);
       this.saveHi();
     }
     saveHi() {
@@ -7728,6 +7775,7 @@ MARE.musicTrackGain = {
       }
       if (this.state === 'over') {
         if (i.tap('Enter') && this.continues > 0) {
+          i.clear();
           this.continues--;
           this.stats.continues++;
           M.RunRecordsR3S?.continue(this);
@@ -80795,7 +80843,12 @@ Object.assign(MARE.soundData, {
     });
   };
   proto.openSoundtrack = function () {
-    if (this.state !== 'title' || M.presentation && M.presentation.phase !== 'menu') return false;
+    if (!['title', 'menu_options'].includes(this.state) || M.presentation && M.presentation.phase !== 'menu') return false;
+    this.soundtrackReturnA = {
+      state: this.state,
+      menuView: this.menuView,
+      menuFocus: this.menuFocus || 0
+    };
     const tracks = M.soundtrackTracks(this.progress),
       index = Math.max(0, tracks.findIndex(t => t.id === this.audio.currentTrack));
     this.soundtrack = {
@@ -80814,7 +80867,13 @@ Object.assign(MARE.soundData, {
     this.audio.releaseMusic();
     this.audio.musicPaused = true;
     this.soundtrack = null;
-    this.state = 'title';
+    const back = this.soundtrackReturnA || {
+      state: 'title',
+      menuView: 'home',
+      menuFocus: 0
+    };
+    Object.assign(this, back);
+    this.soundtrackReturnA = null;
     this.input.clear();
   };
   proto.selectSoundtrack = function (index) {
@@ -83459,7 +83518,11 @@ Object.assign(MARE.soundData, {
       }
     });
   };
+  UI.rememberHomeA = function (g) {
+    if (g.state === 'title' && g.menuView === 'home') g.homeFocusA = g.menuFocus || 0;
+  };
   UI.open = function (g, view) {
+    UI.rememberHomeA(g);
     UI.release();
     g.menuView = view;
     g.menuNavTime = 0;
@@ -83487,10 +83550,11 @@ Object.assign(MARE.soundData, {
     g.draw();
   };
   UI.home = function (g) {
+    const back = g.state?.startsWith('menu_') || ['practice_menu', 'music_player'].includes(g.state);
     UI.release();
     g.state = 'title';
     g.menuView = 'home';
-    g.menuFocus = 0;
+    g.menuFocus = back ? M.clamp(g.homeFocusA || 0, 0, UI.homeActions(g).length - 1) : 0;
     g.menuNavTime = 0;
     g.input.clear();
     g.draw();
@@ -83513,6 +83577,7 @@ Object.assign(MARE.soundData, {
     run: () => item.run(g)
   })));
   UI.confirm = function (g) {
+    UI.rememberHomeA(g);
     if (g.state === 'menu_fd_scenarios') return M.FighterDownR3.confirmSelection(g);
     if (M.EquipmentUIR2B?.owns(g)) return M.EquipmentUIR2B.confirm(g);
     if (g.state === 'title') UI.homeActions(g)[g.menuFocus || 0]?.run();else if (g.state === 'menu_hangar') {
@@ -83558,7 +83623,6 @@ Object.assign(MARE.soundData, {
       dispatchEvent(new Event('resize'));
     }
     if (index === 4) {
-      UI.home(g);
       g.openSoundtrack();
       return;
     }
@@ -83844,10 +83908,14 @@ Object.assign(MARE.soundData, {
     start = proto.start,
     title = proto.toTitle;
   proto.toTitle = function (...args) {
+    const back = this.state === 'practice_menu',
+      focus = this.homeFocusA || 0;
     UI.release();
     this.menuView = 'home';
     this.menuFocus = 0;
-    return title.apply(this, args);
+    const r = title.apply(this, args);
+    if (back) this.menuFocus = M.clamp(focus, 0, UI.homeActions(this).length - 1);
+    return r;
   };
   proto.start = function (...args) {
     UI.release();
@@ -83882,11 +83950,11 @@ Object.assign(MARE.soundData, {
       UI.option(this, 2);
     }
     if (i.tap('KeyL')) {
-      UI.home(this);
       this.openSoundtrack();
       return;
     }
     if (i.tap('F2')) {
+      UI.rememberHomeA(this);
       this.openPracticeMenu();
       return;
     }
@@ -91911,6 +91979,7 @@ MARE.DreadnoughtArmHitboxes = {
   UI.openDifficulty07 = function (g, source = 'mission') {
     if (source === 'practice') return UI.openModeDifficultyR1(g, 'practice_menu');
     g.difficultyReturn07 = source;
+    g.difficultyParentFocusA = g.menuFocus || 0;
     g.state = 'menu_difficulty';
     g.menuFocus = Math.max(0, ids.indexOf(g.selectedDifficulty07 || g.progress.data.difficulty07.selected));
     g.input.clear();
@@ -91927,6 +91996,7 @@ MARE.DreadnoughtArmHitboxes = {
     }
     g.state = g.difficultyReturn07 === 'practice' ? 'practice_menu' : 'title';
     if (g.state === 'title') g.menuView = 'mission';
+    g.menuFocus = g.difficultyParentFocusA || 0;
     g.input.clear();
     g.draw();
   };
@@ -94488,9 +94558,46 @@ MARE.DreadnoughtArmHitboxes = {
   };
   M.shortWeapon10 = id => names[id] || String(id).replaceAll('_', ' ').toUpperCase();
   const right = (c, s, y) => M.text(c, String(s), 315 - (String(s).length * 4 - 1), y);
+  M.hudNumberA = function (value, max = 11) {
+    const n = Math.max(0, Math.floor(Number(value) || 0)),
+      s = String(n);
+    if (s.length <= max) return s;
+    for (const [unit, size] of [['T', 1e12], ['B', 1e9], ['M', 1e6], ['K', 1e3]]) if (n >= size) {
+      const out = (n / size).toFixed(2).replace(/\.?0+$/, '') + unit;
+      if (out.length <= max) return out;
+    }
+    return n.toExponential(2);
+  };
+  M.hudTextA = function (c, value, y, right = false) {
+    let s = String(value);
+    if (s.length > 11) s = s.slice(0, 10) + '.';
+    const x = right ? 311 - (s.length * 4 - 1) : 266;
+    M.text(c, s, x, y);
+  };
+  const hudIcons = {
+    hp: ['upper', 0],
+    defense: ['upper', 1],
+    primary: ['upper', 2],
+    support: ['upper', 3],
+    life: ['lower', 0],
+    continue: ['lower', 1],
+    bomb: ['lower', 2],
+    speed: ['lower', 3]
+  };
+  T.hudIcon = function (c, id, x, y) {
+    const [half, n] = hudIcons[id],
+      im = M.assets['ui/ux_icon_' + half];
+    if (im) c.drawImage(im, 2 + n * 7, 2, 5, 6, x, y, 5, 6);
+  };
   M.drawFlightSidebar = function (c, g) {
     const p = g.player,
-      progress = M.stageProgress(g);
+      progress = M.stageProgress(g),
+      text = (v, y, r = false) => M.hudTextA(c, v, y, r),
+      num = M.hudNumberA,
+      iconText = (id, v, y) => {
+        T.hudIcon(c, id, 266, y);
+        M.text(c, v, id === 'primary' ? 272 : 273, y);
+      };
     c.save();
     c.beginPath();
     c.rect(258, 0, 62, 240);
@@ -94498,45 +94605,46 @@ MARE.DreadnoughtArmHitboxes = {
     T.panel(c, 258, 0, 62, 240, {
       kind: 'frame_primary'
     });
-    for (const y of [30, 50, 93, 109, 143, 182]) T.separator(c, 264, y, 50);
-    M.text(c, progress.mode, 264, 10);
-    right(c, progress.percent + '%', 10);
-    T.progress(c, progress, 264, 20, 50);
-    M.text(c, M.SHIPS[p.ship].name, 264, 35);
-    M.text(c, 'HP' + p.hp + '/' + M.SHIPS[p.ship].hp, 264, 43);
-    right(c, 'DF' + (p.defense || 0) + '/' + M.defenseCap07(p), 43);
-    M.text(c, 'SCORE', 264, 54);
-    M.text(c, String(g.score).padStart(7, '0'), 264, 63);
-    M.text(c, 'HI-SCORE', 264, 74);
-    M.text(c, g.practice ? g.runMode === 'rush' ? 'BOSS RUSH' : 'PRACTICE' : String(Math.max(g.hi, g.score)).padStart(7, '0'), 264, 83);
-    M.text(c, M.difficulty07(g).name, 264, 88);
-    M.text(c, 'L' + p.lives + '/' + M.lifeCap07(p) + ' C' + g.continues, 264, 99);
-    M.text(c, 'PRIMARY', 264, 113);
-    right(c, p.power, 113);
-    M.text(c, M.shortWeapon10(M.PRIMARY_CONTENT.find(e => e.index === p.weapon)?.id), 264, 123);
+    text(g.practice ? g.runMode === 'rush' ? 'RUSH' : 'PRACTICE' : 'S' + g.stage.def.number, 8);
+    text(progress.percent + '%', 8, true);
+    T.progress(c, progress, 266, 16, 46, 5);
+    text(M.difficulty07(g).name, 26);
+    text(M.SHIPS[p.ship].name, 36);
+    iconText('hp', 'HP ' + num(p.hp, 3) + '/' + num(M.SHIPS[p.ship].hp, 3), 45);
+    iconText('defense', 'DF ' + num(p.defense || 0, 3) + '/' + num(M.defenseCap07(p), 3), 53);
+    T.separator(c, 266, 62, 46);
+    text('SCORE', 67);
+    text(num(g.score).padStart(7, '0'), 76);
+    T.hudIcon(c, 'life', 266, 97);
+    M.text(c, 'L' + num(p.lives, 2) + '/' + num(M.lifeCap07(p), 2), 273, 97);
+    T.hudIcon(c, 'continue', 292, 97);
+    M.text(c, 'C' + num(g.continues, 2), 299, 97);
+    iconText('primary', 'PRIMARY', 108);
+    text('L' + num(p.power, 2), 108, true);
+    text(M.shortWeapon10(M.PRIMARY_CONTENT.find(e => e.index === p.weapon)?.id), 117);
     for (let n = 0; n < 10; n++) {
       c.fillStyle = n < p.power ? T.accent : T.accentDim;
-      c.fillRect(264 + n * 5, 133, 4, 3);
+      c.fillRect(266 + n * 4, 126, 3, 3);
     }
-    if (p.overdrive > 0) M.text(c, 'OD ' + p.overdrive.toFixed(1), 264, 138);
-    M.text(c, 'SUPPORT', 264, 147);
-    right(c, p.support ? p.supportLevel : '-', 147);
-    M.text(c, p.support ? M.shortWeapon10(p.support) : 'NO SUPPORT', 264, 157);
+    if (p.overdrive > 0) text('OD ' + p.overdrive.toFixed(1), 132);
+    iconText('support', 'SUPPORT', 143);
+    text(p.support ? 'L' + num(p.supportLevel, 2) : '-', 143, true);
+    text(p.support ? M.shortWeapon10(p.support) : 'NO SUPPORT', 152);
     const s = M.supportStats(p.support, p.supportLevel || 1),
       interval = s.interval || .13 / (s.rof || 1);
     T.progress(c, {
       value: p.support ? M.clamp(1 - p.supportFire / interval, 0, 1) : 0
-    }, 264, 166, 50, 3);
-    M.text(c, p.support ? p.supportOverdrive > 0 ? 'OD ' + p.supportOverdrive.toFixed(1) : p.supportFire <= 0 ? 'READY' : 'RELOAD' : 'PICK UP', 264, 174);
-    M.text(c, g.progress.equipment('fireSupport', 'invictus_fire_support') ? 'FIRE' : 'BOMB', 264, 188);
-    right(c, p.bombs, 188);
-    M.text(c, 'SPEED', 264, 198);
-    right(c, p.speedPower * 10 + '%', 198);
-    M.text(c, 'KILL', 264, 210);
-    right(c, g.practice ? '---' : Math.floor(g.stats.mobKills / Math.max(1, g.stats.spawned) * 100) + '%', 210);
-    M.text(c, g.practice ? 'NO REWARDS' : g.stats.mobKills + '/' + g.stats.spawned, 264, 218);
-    M.text(c, 'AUTO ' + (g.autofire ? 'ON' : 'OFF'), 264, 229);
-    right(c, g.audio.muted ? 'M OFF' : 'M ON', 229);
+    }, 266, 161, 46, 3);
+    text(p.support ? p.supportOverdrive > 0 ? 'OD ' + p.supportOverdrive.toFixed(1) : p.supportFire <= 0 ? 'READY' : 'RELOAD' : 'PICK UP', 168);
+    iconText('bomb', g.progress.equipment('fireSupport', 'invictus_fire_support') ? 'FIRE' : 'BOMB', 179);
+    text(num(p.bombs, 5), 179, true);
+    iconText('speed', 'SPEED', 188);
+    text(p.speedPower * 10 + '%', 188, true);
+    text('KILL', 196);
+    text(g.practice ? '---' : Math.floor(g.stats.mobKills / Math.max(1, g.stats.spawned) * 100) + '%', 196, true);
+    text(g.practice ? 'NO REWARDS' : num(g.stats.mobKills, 5) + '/' + num(g.stats.spawned, 5), 204);
+    text('AUTO ' + (g.autofire ? 'ON' : 'OFF'), 213);
+    text('AUDIO ' + (g.audio.muted ? 'OFF' : 'ON'), 222);
     c.restore();
   };
   const ui = M.ui;
@@ -94580,12 +94688,13 @@ MARE.DreadnoughtArmHitboxes = {
   A.flags = (g, e) => M.menuArchiveFlags(g.progress, e, A.state(g).category === 'bosses');
   A.owns = g => ['menu_archive', 'menu_boss_dossier', 'menu_hostile_dossier'].includes(g.state);
   A.open = function (g) {
+    const parentFocus = g.state === 'menu_run_history_r3s' ? g.archiveUI?.focusIndex || 0 : 0;
     g.heroPreviewFlags09 = null;
     g.archiveUI = {
       screen: 'landing',
       category: 'hostiles',
       page: 0,
-      focusIndex: 0,
+      focusIndex: parentFocus,
       returnIndex: 0,
       internalTab: 0,
       hover: null
@@ -94930,7 +95039,7 @@ MARE.DreadnoughtArmHitboxes = {
     addCap: 1.25
   };
   const MP = M.Multiplayer = {
-    version: 'WEB-PLAYTEST-RC1',
+    version: 'WEB-PLAYTEST-RC2',
     serial: 0
   };
   M.worldGame = g => g?.__mpWorld || g;
@@ -95628,7 +95737,11 @@ MARE.DreadnoughtArmHitboxes = {
     return r;
   };
   MP.restorePlayer = function (g, p) {
-    if (!p.out || g.continues <= 0) return false;
+    if (!p.out || g.continues <= 0 || M.ControlsR2A?.continueReady?.(g) === false) return false;
+    if (g.state === 'over') {
+      g.input.clear();
+      p.input.clear();
+    }
     g.continues--;
     g.stats.continues++;
     g.score = 0;
@@ -95807,6 +95920,7 @@ MARE.DreadnoughtArmHitboxes = {
     mode: 'normal',
     stage: g.selectedStage || 'STAGE_01'
   }) {
+    UI.rememberHomeA(g);
     g.mpLaunch = launch;
     g.state = 'menu_session';
     g.menuFocus = 0;
@@ -95854,8 +95968,19 @@ MARE.DreadnoughtArmHitboxes = {
   U.launch = async function (g) {
     if (g.mpLaunching) return;
     const mode = g.mpLobbyMode;
-    if (!M.ControlsR2A.validDevices(g)) return;
-    if (mode === 'solo' && !g.mpReady[0] || mode === 'local_coop' && !g.mpReady.every(Boolean)) return;
+    if (!M.ControlsR2A.validDevices(g)) {
+      g.mpError = 'ASSIGN CONNECTED DEVICES';
+      g.audio.sfx('cancel');
+      g.draw();
+      return;
+    }
+    if (mode === 'solo' && !g.mpReady[0] || mode === 'local_coop' && !g.mpReady.every(Boolean)) {
+      g.mpError = 'PRESS READY TO ENABLE LAUNCH';
+      g.audio.sfx('cancel');
+      g.draw();
+      return;
+    }
+    g.mpError = '';
     const c = {
       ...g.mpLaunch,
       sessionMode: mode,
@@ -95913,6 +96038,7 @@ MARE.DreadnoughtArmHitboxes = {
         });
       }
     });
+    if (disabled && id === 'start') UI.hit(x, y, w, h, () => U.launch(g));
   };
   U.draw = function (c, g) {
     UI.regions = [];
@@ -95928,14 +96054,20 @@ MARE.DreadnoughtArmHitboxes = {
     } else {
       const launch = g.mpLaunch,
         solo = g.mpLobbyMode === 'solo';
-      M.text(c, (solo ? 'SOLO' : 'LOCAL CO-OP') + ' / ' + (launch.mode || 'normal').toUpperCase(), 18, 48);
+      M.text(c, (solo ? 'SOLO' : 'LOCAL CO-OP') + ' / ' + ({
+        normal: 'CAMPAIGN',
+        practice: 'BOSS PRACTICE',
+        rush: 'BOSS RUSH',
+        fighter_down: 'FIGHTER DOWN'
+      }[launch.mode] || String(launch.mode).toUpperCase()), 18, 48);
+      M.centerText(c, !M.ControlsR2A.validDevices(g) ? 'ASSIGN CONNECTED DEVICES' : g.mpReady[0] && (solo || g.mpReady[1]) ? 'READY - SELECT LAUNCH' : solo ? 'PRESS READY TO ENABLE LAUNCH' : 'BOTH PLAYERS MUST BE READY', 160, 58);
       add('stage', 'STAGE ' + M.STAGES[launch.stage || 'STAGE_01'].number, 16, 69, 139, 20, () => {
         const ids = Object.keys(M.STAGES),
           i = ids.indexOf(g.mpLaunch.stage);
         g.mpLaunch.stage = ids[(i + 1) % ids.length];
         g.mpReady[0] = false;
       }, launch.mode !== 'normal');
-      add('difficulty', (['practice', 'rush'].includes(launch.mode) ? M.Difficulties07[UI.modeDifficultyR1(g)] : M.difficultyMenu07(g)).name, 165, 69, 139, 20, () => {
+      add('difficulty', 'DIFF: ' + (['practice', 'rush'].includes(launch.mode) ? M.Difficulties07[UI.modeDifficultyR1(g)] : M.difficultyMenu07(g)).name, 165, 69, 139, 20, () => {
         if (['practice', 'rush'].includes(launch.mode)) return UI.openModeDifficultyR1(g, 'menu_mp_lobby');
         const ids = Object.keys(M.Difficulties07).filter(id => g.progress.difficultyUnlocked07(id) || false),
           i = ids.indexOf(g.selectedDifficulty07 || 'easy');
@@ -95955,7 +96087,7 @@ MARE.DreadnoughtArmHitboxes = {
         M.text(c, 'PLAYER ' + (n + 1), x + 49, 110);
         add('ship' + n, ship.name, x + 49, 121, 83, 18, () => U.ship(g, n), !enabled);
         add('device' + n, solo && n === 1 ? 'NOT PLAYING' : M.ControlsR2A.deviceLabel(g, n) + (enabled && M.ControlsR2A.available(g, n) ? ' / OK' : ''), x + 7, 146, 125, 17, () => U.device(g, n), !enabled);
-        M.text(c, solo && n === 1 ? 'INACTIVE' : !M.ControlsR2A.available(g, n) ? 'DISCONNECTED' : M.ControlsR2A.label(Number.isInteger(g.mpDevices?.[n]) ? 'gamepad' : 'keyboard', Number.isInteger(g.mpDevices?.[n]) ? 'game' : solo || null ? 'solo' : 'p' + (n + 1), 'fire') + ' FIRE', x + 7, 138);
+        M.text(c, solo && n === 1 ? 'INACTIVE' : !M.ControlsR2A.available(g, n) ? 'DISCONNECTED' : M.ControlsR2A.label(Number.isInteger(g.mpDevices?.[n]) ? 'gamepad' : 'keyboard', Number.isInteger(g.mpDevices?.[n]) ? 'game' : solo || null ? 'solo' : 'p' + (n + 1), 'fire', false, Number.isInteger(g.mpDevices?.[n]) ? M.ControlsR2A.resolve(g, n) : null) + ' FIRE', x + 7, 138);
         const ready = g.mpReady[n];
         add('ready' + n, ready ? 'READY' : 'NOT READY', x + 7, 168, 125, 17, () => {
           g.mpReady[n] = !g.mpReady[n];
@@ -96017,6 +96149,8 @@ MARE.DreadnoughtArmHitboxes = {
   const hud = M.drawFlightSidebar;
   M.drawFlightSidebar = function (c, g) {
     if (!M.isCoop(g)) return hud(c, g);
+    const text = (v, y, r = false) => M.hudTextA(c, v, y, r),
+      num = M.hudNumberA;
     c.save();
     c.beginPath();
     c.rect(258, 0, 62, 240);
@@ -96025,25 +96159,38 @@ MARE.DreadnoughtArmHitboxes = {
       kind: 'frame_primary'
     });
     const pr = M.stageProgress(g);
-    M.text(c, 'S' + g.stage.def.number + ' ' + pr.percent + '%', 264, 8);
-    T.progress(c, pr, 264, 18, 50);
-    M.text(c, M.difficulty07(g).name, 264, 29);
+    text('S' + g.stage.def.number, 8);
+    text(pr.percent + '%', 8, true);
+    T.progress(c, pr, 266, 16, 46, 5);
+    text(M.difficulty07(g).name, 26);
+    text('SCORE', 36);
+    text(num(g.score).padStart(7, '0'), 44);
     g.players.forEach((p, n) => {
-      const y = 43 + n * 80;
-      T.separator(c, 264, y - 3, 50);
-      M.text(c, p.playerId + ' ' + M.SHIPS[p.ship].name, 264, y);
-      M.text(c, p.out ? 'OUT - JOIN' : p.dead > 0 ? 'RESPAWNING' : 'HP ' + p.hp + ' DF ' + (p.defense || 0), 264, y + 10);
-      M.text(c, 'L' + p.lives + ' B' + p.bombs, 264, y + 20);
-      M.text(c, M.shortWeapon10(M.PRIMARY_CONTENT.find(e => e.index === p.weapon)?.id).slice(0, 12), 264, y + 31);
-      M.text(c, 'LV' + p.power + (p.overdrive > 0 ? ' OD' : ''), 264, y + 40);
-      M.text(c, p.support ? M.shortWeapon10(p.support).slice(0, 12) : 'NO SUPPORT', 264, y + 50);
-      M.text(c, 'LV' + p.supportLevel + (p.supportOverdrive > 0 ? ' OD' : ''), 264, y + 59);
-      if (p.shipOverdrive > 0) M.text(c, 'SHIP OD ' + Math.ceil(p.shipOverdrive), 264, y + 69);
+      const y = 58 + n * 70;
+      T.separator(c, 266, y - 4, 46);
+      text(p.playerId + ' ' + M.SHIPS[p.ship].name, y);
+      if (p.out || p.dead > 0) text(p.out ? 'OUT - JOIN' : 'RESPAWNING', y + 8);else {
+        T.hudIcon(c, 'hp', 266, y + 8);
+        M.text(c, 'HP' + num(p.hp, 2), 273, y + 8);
+        T.hudIcon(c, 'defense', 290, y + 8);
+        M.text(c, 'DF' + num(p.defense || 0, 2), 297, y + 8);
+      }
+      T.hudIcon(c, 'life', 266, y + 16);
+      M.text(c, 'L' + num(p.lives, 2), 273, y + 16);
+      T.hudIcon(c, 'bomb', 290, y + 16);
+      M.text(c, 'B' + num(p.bombs, 2), 297, y + 16);
+      text(M.shortWeapon10(M.PRIMARY_CONTENT.find(e => e.index === p.weapon)?.id), y + 24);
+      T.hudIcon(c, 'primary', 266, y + 32);
+      M.text(c, 'LV' + p.power + (p.overdrive > 0 ? ' OD' : ''), 273, y + 32);
+      text(p.support ? M.shortWeapon10(p.support) : 'NO SUPPORT', y + 40);
+      T.hudIcon(c, 'support', 266, y + 48);
+      M.text(c, 'LV' + p.supportLevel + (p.supportOverdrive > 0 ? ' OD' : ''), 273, y + 48);
+      if (p.shipOverdrive > 0) text('SHIP OD ' + Math.ceil(p.shipOverdrive), y + 56);
     });
-    T.separator(c, 264, 205, 50);
-    M.text(c, 'SCORE', 264, 209);
-    M.text(c, String(g.score).padStart(7, '0'), 264, 219);
-    M.text(c, 'CONT ' + g.continues, 264, 230);
+    text('P1 AUTO ' + (g.autofire ? 'ON' : 'OFF'), 203);
+    text('P2 AUTO ' + (g.players[1]?.autofire ? 'ON' : 'OFF'), 212);
+    T.hudIcon(c, 'continue', 266, 221);
+    M.text(c, 'CONT ' + num(g.continues, 5), 273, 221);
     c.restore();
   };
   const draw = M.Game.prototype.draw;
@@ -103259,7 +103406,7 @@ MARE.HostileLaserContractG = {
     const d = g.mpDevices?.[n],
       kind = Number.isInteger(d) ? 'gamepad' : 'keyboard',
       profile = kind === 'gamepad' ? 'game' : M.isCoop(g) ? 'p' + (n + 1) : 'solo';
-    return C.label(kind, profile, a);
+    return C.label(kind, profile, a, false, kind === 'gamepad' ? C.resolve(g, n) : null);
   };
   U.open = function (g) {
     g.controlsReturnR2A = {
@@ -103759,13 +103906,13 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
   };
   U.confirm = function (g) {
     const n = U.slot(g);
-    if (g.state === 'menu_hangar') {
+    if (g.equipmentHeaderR2B) {
+      U.changeSlot(g);
+    } else if (g.state === 'menu_hangar') {
       const item = M.SHIP_CONTENT[g.menuFocus || 0];
       const ok = E.saveChoice(g.progress, n, 'ship', item.id);
       g.equipmentNoticeR2B = ok ? 'SHIP SELECTED FOR NEXT RUN' : 'SHIP LOCKED';
       g.audio.sfx(ok ? 'confirm' : 'cancel');
-    } else if (g.equipmentHeaderR2B) {
-      U.changeSlot(g);
     } else if (g.armoryTab === 1) {
       g.equipmentNoticeR2B = 'SUPPORT IS REFERENCE ONLY';
     } else {
@@ -103779,9 +103926,24 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
     const i = g.input,
       nav = UI.navigation(g, dt);
     if (g.state === 'menu_hangar') {
-      if (i.tap('KeyQ') || i.tap('Tab') || i.tap('KeyX')) U.changeSlot(g);else if (nav.x || nav.y) g.menuFocus = ((g.menuFocus || 0) + (nav.x || nav.y) + M.SHIP_CONTENT.length) % M.SHIP_CONTENT.length;
+      if (i.tap('KeyQ') || i.tap('Tab') || i.tap('KeyX')) U.changeSlot(g);else if (g.equipmentHeaderR2B) {
+        if (nav.x) {
+          U.changeSlot(g);
+          g.equipmentHeaderR2B = true;
+        }
+        if (nav.y > 0) g.equipmentHeaderR2B = false;
+      } else if (nav.y < 0) g.equipmentHeaderR2B = true;else if (nav.x || nav.y) g.menuFocus = ((g.menuFocus || 0) + (nav.x || nav.y) + M.SHIP_CONTENT.length) % M.SHIP_CONTENT.length;
     } else {
-      if (i.tap('KeyQ') || i.tap('Tab') || i.tap('KeyX')) {
+      const shoulderLeft = M.ControlsR2A.shoulderTabA(g, 4),
+        shoulderRight = M.ControlsR2A.shoulderTabA(g, 5);
+      if (shoulderLeft || shoulderRight) {
+        g.armoryTab = shoulderRight ? 1 : 0;
+        g.armoryLevel = 1;
+        g.menuFocus = 0;
+        delete i.pressed.Minus;
+        delete i.pressed.Equal;
+        g.audio.sfx('move');
+      } else if (i.tap('KeyQ') || i.tap('Tab') || i.tap('KeyX')) {
         g.armoryTab = 1 - (g.armoryTab || 0);
         g.armoryLevel = 1;
         g.menuFocus = 0;
@@ -103789,7 +103951,10 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
       }
       if (i.tap('PageUp') || i.tap('PageDown')) U.changeSlot(g);
       if (g.equipmentHeaderR2B) {
-        if (nav.x) U.changeSlot(g);
+        if (nav.x) {
+          U.changeSlot(g);
+          g.equipmentHeaderR2B = true;
+        }
         if (nav.y > 0) g.equipmentHeaderR2B = false;
       } else if (nav.y < 0 && (g.menuFocus || 0) < 2) g.equipmentHeaderR2B = true;else if (nav.x || nav.y) {
         const count = UI.armoryItems(g).length;
@@ -103803,7 +103968,7 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
   };
   U.hangarDraw = function (c, g) {
     UI.header(c, 'HANGAR');
-    M.text(c, M.ControlsR2A.menuLabel(g, 'tab') + ' PLAYER', 232, 25);
+    M.text(c, g.equipmentHeaderR2B ? 'LEFT/RIGHT: PLAYER' : 'UP: PLAYER / ' + M.ControlsR2A.menuLabel(g, 'tab'), 232, 25);
     const slot = U.slot(g),
       focus = g.menuFocus || 0,
       page = Math.floor(focus / 3),
@@ -103860,7 +104025,7 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
   const num = n => Number.isFinite(n) ? n.toFixed(1).replace(/\.0$/, '') : '---';
   U.armoryDraw = function (c, g) {
     UI.header(c, 'ARMORY');
-    M.text(c, M.ControlsR2A.menuLabel(g, 'up') + ' TO PLAYER', 232, 25);
+    M.text(c, g.equipmentHeaderR2B ? 'LB/RB: TAB' : 'UP: PLAYER', 232, 25);
     const slot = U.slot(g),
       support = g.armoryTab === 1,
       items = UI.armoryItems(g),
@@ -103950,142 +104115,13 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
     M.text(c, 'PLAYER ' + (n + 1), x + 7, 103);
     M.sprite(c, 'player/' + ship.sprite, x + 24, 133);
     A.add(c, g, 'ship' + n, ship.name, x + 49, 114, 83, 16, () => A.ship(g, n), !enabled);
-    M.text(c, inactive ? 'INACTIVE' : M.ControlsR2A.label(Number.isInteger(g.mpDevices?.[n]) ? 'gamepad' : 'keyboard', Number.isInteger(g.mpDevices?.[n]) ? 'game' : solo || null ? 'solo' : 'p' + (n + 1), 'fire') + ' FIRE', x + 49, 134);
+    M.text(c, inactive ? 'INACTIVE' : M.ControlsR2A.label(Number.isInteger(g.mpDevices?.[n]) ? 'gamepad' : 'keyboard', Number.isInteger(g.mpDevices?.[n]) ? 'game' : solo || null ? 'solo' : 'p' + (n + 1), 'fire', false, Number.isInteger(g.mpDevices?.[n]) ? M.ControlsR2A.resolve(g, n) : null) + ' FIRE', x + 49, 134);
     A.add(c, g, 'primary' + n, inactive ? 'NOT PLAYING' : entry ? M.WEAPONS[entry.index].name : 'WAITING PRIMARY', x + 7, 145, 125, 15, () => E.cyclePrimary(g, n), !enabled);
     A.add(c, g, 'device' + n, inactive ? 'NOT PLAYING' : M.ControlsR2A.deviceLabel(g, n) + (enabled && M.ControlsR2A.available(g, n) ? ' / OK' : ''), x + 7, 162, 125, 15, () => A.device(g, n), !enabled);
     const ready = g.mpReady[n];
     A.add(c, g, 'ready' + n, ready ? 'READY' : 'NOT READY', x + 7, 179, 125, 15, () => {
       g.mpReady[n] = !g.mpReady[n];
     }, !enabled);
-  };
-})(MARE);
-
-;
-"use strict";
-
-(function (M) {
-  'use strict';
-
-  const U = M.UnlockPresentationR2C = {},
-    states = new WeakMap(),
-    duration = 2;
-  const catalog = category => category === 'ships' ? M.SHIP_CONTENT : category === 'primary' ? M.PRIMARY_CONTENT : category === 'support' ? M.SUPPORT_CONTENT : [];
-  U.item = function (category, id) {
-    const item = catalog(category).find(v => v.id === id);
-    if (!item) return null;
-    return {
-      category,
-      id,
-      name: category === 'ships' ? M.SHIPS[item.index].name : category === 'primary' ? M.WEAPONS[item.index].name : id.replaceAll('_', ' ').toUpperCase(),
-      section: category === 'ships' ? 'Hangar' : 'Armory',
-      art: category === 'ships' ? 'player/' + M.SHIPS[item.index].sprite : id === 'laser_ray' ? null : M.EquipmentUIR2B.art(item)
-    };
-  };
-  M.assetGroups.MENU_UNLOCK_R2C = [...new Set(['ships', 'primary', 'support'].flatMap(category => catalog(category).filter(v => !v.defaultUnlocked).map(v => U.item(category, v.id).art)).filter(Boolean))];
-  function loadArt() {
-    if (M.resources) M.loadGroup('MENU_UNLOCK_R2C').catch(error => console.warn('Unlock icon unavailable:', error.message));
-  }
-  function state(g) {
-    let s = states.get(g);
-    if (!s || s.progress !== g.progress) {
-      s = {
-        progress: g.progress,
-        queue: [],
-        seen: new Set(),
-        elapsed: 0,
-        visible: false
-      };
-      states.set(g, s);
-    }
-    return s;
-  }
-  U.record = function (progress, category, id) {
-    const g = M.game,
-      item = U.item(category, id),
-      entry = catalog(category).find(v => v.id === id),
-      fd = g?.fighterDown;
-    if (!g || g.progress !== progress || !item || entry.defaultUnlocked || false || g.stage3DebugAssisted || g.stage4DebugAssisted || g.practice || g.runMode === 'rush') return;
-    if (!(g.runMode === 'normal' && (g.progressEligible || false) || fd?.source === 'campaign' && fd.session?.eligible)) return;
-    const s = state(g),
-      key = category + ':' + id;
-    if (s.seen.has(key)) return;
-    s.seen.add(key);
-    s.queue.push(item);
-    loadArt();
-  };
-  U.safe = g => !g.ending1006?.active && !void 0 && (!M.presentation || M.presentation.phase === 'menu') && ['clear', 'fighter_down_win', 'title'].includes(g.state);
-  U.update = function (g, dt) {
-    const s = state(g),
-      item = s.queue[0];
-    s.visible = !!item && U.safe(g);
-    if (!s.visible || item.art && !M.assets[item.art]) return;
-    s.elapsed += Math.max(0, dt);
-    if (s.elapsed >= duration) {
-      s.queue.shift();
-      s.elapsed = 0;
-      s.visible = !!s.queue.length;
-    }
-  };
-  U.icon = function (c, item) {
-    if (item.id === 'laser_ray') {
-      M.drawRay(c, 160, 132, 99, 2);
-      return;
-    }
-    const a = M.assetInfo[item.art],
-      im = M.assets[item.art];
-    if (!a || !im) return;
-    const frame = item.id === 'quantum_dot' ? a.sequences.charge[0] : 0,
-      r = a.rects?.[frame] || [frame * a.w, 0, a.w, a.h],
-      scale = Math.max(1, Math.floor(Math.min(48 / a.w, 38 / a.h))),
-      w = a.w * scale,
-      h = a.h * scale;
-    c.drawImage(im, ...r, Math.round(160 - w / 2), Math.round(97 + (38 - h) / 2), w, h);
-  };
-  U.draw = function (c, g) {
-    const s = state(g);
-    if (!s.queue.length || !U.safe(g)) return;
-    const item = s.queue[0],
-      T = M.UITheme;
-    c.save();
-    c.imageSmoothingEnabled = false;
-    T.panel(c, 42, 68, 236, 108, {
-      active: true
-    });
-    M.centerText(c, item.category === 'ships' ? 'NEW SHIP UNLOCKED' : 'NEW EQUIPMENT UNLOCKED', 160, 79);
-    T.separator(c, 54, 91, 212);
-    U.icon(c, item);
-    M.centerText(c, item.name, 160, 143);
-    M.centerText(c, 'Check it in ' + item.section, 160, 160);
-    c.restore();
-  };
-  U.inspect = function (g) {
-    const s = state(g);
-    return {
-      queued: s.queue.map(v => ({
-        ...v
-      })),
-      elapsed: s.elapsed,
-      visible: !!s.queue.length && U.safe(g)
-    };
-  };
-  const gp = M.Game.prototype,
-    queue = gp.queueSystemCues;
-  gp.queueSystemCues = function (...messages) {
-    const itemLines = new Set(['SHIP DATA ACQUIRED', 'WEAPON DATA ACQUIRED', 'SUPPORT DATA ACQUIRED']);
-    for (const category of ['ships', 'primary', 'support']) for (const item of catalog(category)) itemLines.add(U.item(category, item.id).name + ' UNLOCKED');
-    return queue.apply(this, messages.filter(text => !itemLines.has(text)));
-  };
-  const update = gp.update;
-  gp.update = function (dt) {
-    const r = update.call(this, dt);
-    U.update(this, dt);
-    return r;
-  };
-  const draw = gp.draw;
-  gp.draw = function (...args) {
-    const r = draw.apply(this, args);
-    U.draw(this.ctx, this);
-    return r;
   };
 })(MARE);
 
@@ -105533,7 +105569,177 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
   };
 })(MARE);
 
-;(function(M){M.version='PROJECT Z — WEB PLAYTEST RC1';M.WebRelease=Object.freeze({id:'RC1',baseline:'10.0.35',baselineFingerprint:'f4b94b5b3f9ff03af4bb1dee3bdbf5ffd1528f24dbe5add5c2e9f11d5e014d86'});})(MARE);
+;
+"use strict";
+
+(function (M) {
+  'use strict';
+
+  const U = M.UnlockPresentationR2C = {},
+    states = new WeakMap();
+  const catalog = category => category === 'ships' ? M.SHIP_CONTENT : category === 'primary' ? M.PRIMARY_CONTENT : category === 'support' ? M.SUPPORT_CONTENT : [];
+  U.item = function (category, id) {
+    const item = catalog(category).find(v => v.id === id);
+    if (!item) return null;
+    return {
+      category,
+      id,
+      name: category === 'ships' ? M.SHIPS[item.index].name : category === 'primary' ? M.WEAPONS[item.index].name : id.replaceAll('_', ' ').toUpperCase(),
+      section: category === 'ships' ? 'Hangar' : 'Armory',
+      art: category === 'ships' ? 'player/' + M.SHIPS[item.index].sprite : id === 'laser_ray' ? null : M.EquipmentUIR2B.art(item)
+    };
+  };
+  M.assetGroups.MENU_UNLOCK_R2C = [...new Set(['ships', 'primary', 'support'].flatMap(category => catalog(category).filter(v => !v.defaultUnlocked).map(v => U.item(category, v.id).art)).filter(Boolean))];
+  function loadArt() {
+    if (M.resources) M.loadGroup('MENU_UNLOCK_R2C').catch(error => console.warn('Unlock icon unavailable:', error.message));
+  }
+  function state(g) {
+    let s = states.get(g);
+    if (!s || s.progress !== g.progress) {
+      s = {
+        progress: g.progress,
+        queue: [],
+        seen: new Set(),
+        elapsed: 0,
+        visible: false
+      };
+      states.set(g, s);
+    }
+    return s;
+  }
+  function barrier(g) {
+    g.input.clear();
+    for (const p of g.players || []) if (p.input !== g.input) p.input?.clear();
+  }
+  U.record = function (progress, category, id) {
+    const g = M.game,
+      item = U.item(category, id),
+      entry = catalog(category).find(v => v.id === id),
+      fd = g?.fighterDown;
+    if (!g || g.progress !== progress || !item || entry.defaultUnlocked || false || g.stage3DebugAssisted || g.stage4DebugAssisted || g.practice || g.runMode === 'rush') return;
+    if (!(g.runMode === 'normal' && (g.progressEligible || false) || fd?.source === 'campaign' && fd.session?.eligible)) return;
+    const s = state(g),
+      key = category + ':' + id;
+    if (s.seen.has(key)) return;
+    s.seen.add(key);
+    s.queue.push(item);
+    loadArt();
+  };
+  U.safe = g => !g.ending1006?.active && !void 0 && (!M.presentation || M.presentation.phase === 'menu') && ['clear', 'fighter_down_win', 'title', 'menu_run_results_r3s'].includes(g.state);
+  U.update = function (g, dt) {
+    const s = state(g),
+      safe = !!s.queue.length && U.safe(g);
+    if (!safe) {
+      s.visible = false;
+      return false;
+    }
+    if (!s.visible) {
+      s.visible = true;
+      s.elapsed = 0;
+      barrier(g);
+    }
+    s.elapsed += Math.max(0, dt);
+    return true;
+  };
+  U.dismiss = function (g) {
+    const s = state(g);
+    if (!s.visible || s.elapsed < .2) return false;
+    s.queue.shift();
+    s.elapsed = 0;
+    s.visible = !!s.queue.length;
+    barrier(g);
+    return true;
+  };
+  U.icon = function (c, item) {
+    const box = {
+      x: 141,
+      y: 168,
+      w: 28,
+      h: 38
+    };
+    c.save();
+    c.beginPath();
+    c.rect(box.x, box.y, box.w, box.h);
+    c.clip();
+    if (item.id === 'laser_ray') {
+      M.drawRay(c, 155, 171, 203, 2);
+      c.restore();
+      return;
+    }
+    const a = M.assetInfo[item.art],
+      im = M.assets[item.art];
+    if (a && im) {
+      const frame = item.id === 'quantum_dot' ? a.sequences.charge[0] : 0,
+        r = a.rects?.[frame] || [frame * a.w, 0, a.w, a.h],
+        fit = Math.min(box.w / a.w, box.h / a.h),
+        scale = fit >= 1 ? Math.floor(fit) : fit,
+        w = Math.max(1, Math.round(a.w * scale)),
+        h = Math.max(1, Math.round(a.h * scale));
+      c.drawImage(im, ...r, Math.round(box.x + (box.w - w) / 2), Math.round(box.y + (box.h - h) / 2), w, h);
+    }
+    c.restore();
+  };
+  U.draw = function (c, g) {
+    const s = state(g);
+    if (!s.visible || !U.safe(g)) return;
+    const item = s.queue[0],
+      T = M.UITheme;
+    c.save();
+    c.imageSmoothingEnabled = false;
+    T.panel(c, 134, 163, 172, 49, {
+      active: true
+    });
+    U.icon(c, item);
+    M.text(c, item.category === 'ships' ? 'NEW SHIP UNLOCKED' : 'NEW EQUIPMENT UNLOCKED', 177, 169);
+    M.text(c, item.name, 177, 177);
+    M.text(c, 'Check it in ' + item.section, 177, 185);
+    const prompt = M.ControlsR2A.menuLabel(g, 'confirm') + ' / ' + M.ControlsR2A.menuLabel(g, 'back') + ' - CLOSE',
+      lines = [''];
+    for (const word of prompt.split(' ')) {
+      const n = lines.length - 1;
+      if (lines[n] && lines[n].length + word.length + 1 > 30) lines.push(word);else lines[n] += (lines[n] ? ' ' : '') + word;
+    }
+    lines.forEach((line, n) => M.text(c, line, 177, 193 + n * 8));
+    c.restore();
+  };
+  U.inspect = function (g) {
+    const s = state(g);
+    return {
+      queued: s.queue.map(v => ({
+        ...v
+      })),
+      elapsed: s.elapsed,
+      visible: s.visible && U.safe(g)
+    };
+  };
+  const gp = M.Game.prototype,
+    queue = gp.queueSystemCues;
+  gp.queueSystemCues = function (...messages) {
+    const itemLines = new Set(['SHIP DATA ACQUIRED', 'WEAPON DATA ACQUIRED', 'SUPPORT DATA ACQUIRED']);
+    for (const category of ['ships', 'primary', 'support']) for (const item of catalog(category)) itemLines.add(U.item(category, item.id).name + ' UNLOCKED');
+    return queue.apply(this, messages.filter(text => !itemLines.has(text)));
+  };
+  const update = gp.update;
+  gp.update = function (dt) {
+    if (U.update(this, dt)) {
+      const i = this.input;
+      i.poll?.();
+      if (i.tap('Enter') || i.tap('Space') || i.tap('Escape') || i.tap('KeyR')) U.dismiss(this);
+      return;
+    }
+    const r = update.call(this, dt);
+    U.update(this, 0);
+    return r;
+  };
+  const draw = gp.draw;
+  gp.draw = function (...args) {
+    const r = draw.apply(this, args);
+    U.draw(this.ctx, this);
+    return r;
+  };
+})(MARE);
+
+;(function(M){M.version='PROJECT Z — WEB PLAYTEST RC2';M.WebRelease=Object.freeze({id:'RC2',baseline:'10.0.36',baselineFingerprint:'3700a295f9a711e565bcbcbfab0d8ad986b81436cb45df9170eb9cd65935bfce'});})(MARE);
 ;
 "use strict";
 
