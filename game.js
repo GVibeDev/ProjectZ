@@ -84124,6 +84124,7 @@ Object.assign(MARE.soundData, {
       pool: 16
     },
     reticle: {
+      exclusionRadius: 46,
       deadzone: .18,
       acceleration: 720,
       maxSpeed: 180,
@@ -84473,15 +84474,70 @@ Object.assign(MARE.soundData, {
   M.startFighterDown = options => M.game.startFighterDown(options);
   M.campaignFighterDownDue = g => g.state === 'clear' && g.stage.def.id === (M.FighterDownR3Config?.campaignFrom || 'STAGE_04') && g.runMode === 'normal' && !g.practice && !g._fighterDownGateSatisfied;
   M.FighterDownReticleController = class {
-    constructor() {
+    constructor(target = T.target) {
+      this.__target = target;
       this.x = 160;
       this.y = 76;
       this.vx = 0;
       this.vy = 0;
+      this.constrain();
+    }
+    constrain() {
+      this.x = M.clamp(this.x, T.reticle.padding, M.W - T.reticle.padding);
+      this.y = M.clamp(this.y, T.reticle.minY, T.reticle.maxY);
+      const t = this.__target || T.target,
+        r = T.reticle.exclusionRadius,
+        dx = this.x - t.x,
+        dy = this.y - t.y,
+        d = Math.hypot(dx, dy);
+      if (d < r) {
+        const nx = d > 1e-9 ? dx / d : this.__nx ?? 0,
+          ny = d > 1e-9 ? dy / d : this.__ny ?? -1;
+        this.x = t.x + nx * r;
+        this.y = t.y + ny * r;
+      }
+      const n = Math.hypot(this.x - t.x, this.y - t.y);
+      if (n > 1e-9) {
+        this.__nx = (this.x - t.x) / n;
+        this.__ny = (this.y - t.y) / n;
+      }
+    }
+    move(x, y) {
+      this.constrain();
+      x = M.clamp(x, T.reticle.padding, M.W - T.reticle.padding);
+      y = M.clamp(y, T.reticle.minY, T.reticle.maxY);
+      const dx = x - this.x,
+        dy = y - this.y,
+        steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 4));
+      for (let n = 0; n < steps; n++) {
+        const t = this.__target || T.target,
+          r = T.reticle.exclusionRadius,
+          sx = dx / steps,
+          sy = dy / steps,
+          ox = this.x - t.x,
+          oy = this.y - t.y;
+        const a = sx * sx + sy * sy,
+          b = 2 * (ox * sx + oy * sy),
+          c = ox * ox + oy * oy - r * r,
+          disc = b * b - 4 * a * c;
+        const enter = a > 1e-18 && disc >= 0 ? (-b - Math.sqrt(disc)) / (2 * a) : Infinity;
+        if (enter >= -1e-8 && enter <= 1 && b < 0) {
+          const at = M.clamp(enter, 0, 1),
+            nx = (ox + sx * at) / r,
+            ny = (oy + sy * at) / r;
+          const tangent = (1 - at) * (-sx * ny + sy * nx),
+            angle = Math.atan2(ny, nx) + tangent / r;
+          this.x = t.x + Math.cos(angle) * r;
+          this.y = t.y + Math.sin(angle) * r;
+        } else {
+          this.x += sx;
+          this.y += sy;
+        }
+        this.constrain();
+      }
     }
     aim(x, y) {
-      this.x = M.clamp(x, T.reticle.padding, M.W - T.reticle.padding);
-      this.y = M.clamp(y, T.reticle.minY, T.reticle.maxY);
+      this.move(x, y);
       this.vx = this.vy = 0;
     }
     update(dt, input) {
@@ -84499,8 +84555,7 @@ Object.assign(MARE.soundData, {
       const approach = (v, target) => v + M.clamp(target - v, -T.reticle.acceleration * dt, T.reticle.acceleration * dt);
       this.vx = approach(this.vx, x * T.reticle.maxSpeed);
       this.vy = approach(this.vy, y * T.reticle.maxSpeed);
-      this.x = M.clamp(this.x + this.vx * dt, T.reticle.padding, M.W - T.reticle.padding);
-      this.y = M.clamp(this.y + this.vy * dt, T.reticle.minY, T.reticle.maxY);
+      this.move(this.x + this.vx * dt, this.y + this.vy * dt);
     }
   };
   function spawnPoint(edge, lane, offset) {
@@ -84545,7 +84600,7 @@ Object.assign(MARE.soundData, {
       this.target = {
         ...T.target
       };
-      this.reticle = new M.FighterDownReticleController();
+      this.reticle = new M.FighterDownReticleController(this.target);
       this.ammo = T.ammo.initial;
       this.recharge = 0;
       this.rechargePulse = 0;
@@ -84705,6 +84760,10 @@ Object.assign(MARE.soundData, {
     updateTickR3(dt) {
       const g = this.game;
       dt *= this.debugTimeScale;
+      if (g.state === 'fighter_down_win') {
+        this.resultTime += dt;
+        return;
+      }
       g.clock += dt;
       if (g.state === 'fighter_down_intro') {
         this.introElapsed += dt;
@@ -84712,7 +84771,7 @@ Object.assign(MARE.soundData, {
         if (this.introElapsed + 1e-9 >= T.introMax) this.endIntro();
         return;
       }
-      if (g.state === 'fighter_down_failed' || g.state === 'fighter_down_win') {
+      if (g.state === 'fighter_down_failed') {
         this.resultTime += dt;
         this.updateEffects(dt);
         return;
@@ -84849,7 +84908,7 @@ Object.assign(MARE.soundData, {
         M.centerText(c, 'PROTECT THE FIGHTER - AIM AND FIRE', 160, 120);
       }
       if (g.state === 'fighter_down_failed') this.drawResult(c, 'MISSION FAILED', 'ONE CONTACT - DEFENSE LOST', 'RETRY');
-      if (g.state === 'fighter_down_win') this.drawResult(c, 'SYSTEMS RESTORED', this.source === 'campaign' && this.session.eligible && M.FighterDownR3.firstCompletion(this) ? 'DAGGER / FIGHTER DOWN UNLOCKED' : 'DEFENSE COMPLETE', 'CONTINUE');
+      if (g.state === 'fighter_down_win') this.drawMissionComplete(c);
       if (g.state === 'fighter_down_pause') this.drawResult(c, 'PAUSED', 'REPAIR AND RECHARGE ON HOLD', 'RESUME');
     }
     drawHUD(c) {
@@ -84873,6 +84932,17 @@ Object.assign(MARE.soundData, {
       c.fillStyle = this.rechargePulse > 0 ? '#e5d58a' : '#74c6c0';
       c.fillRect(23, 231, 158 * (this.ammo === T.ammo.max ? 1 : this.recharge / T.ammo.rechargeInterval), 3);
       M.text(c, M.ControlsR2A ? 'CLICK / ' + M.ControlsR2A.gameLabel(g, 'fire') + ' FIRE' : 'CLICK / SPACE FIRE', 205, 231);
+    }
+    drawMissionComplete(c) {
+      const g = this.game;
+      M.MenuUI.panel(c, 'frame_primary', 24, 65, 272, 91);
+      M.centerText(c, 'MISSION COMPLETE', 160, 77, 2);
+      M.centerText(c, 'FIGHTER DOWN - SCENARIO CLEARED', 160, 98);
+      M.centerText(c, 'PRESS CONFIRM TO CONTINUE', 160, 111);
+      const label = M.ControlsR2A?.menuLabel(g, 'confirm') || 'ENTER';
+      M.MenuUI.button(c, label + ' CONTINUE', 96, 126, true, () => g.input.pulse('Enter'), {
+        kind: 'main'
+      });
     }
     drawResult(c, title, subtitle, action) {
       const g = this.game;
@@ -85078,7 +85148,7 @@ Object.assign(MARE.soundData, {
         this.pause();
         return;
       }
-    } else if (i.tap('KeyR') || i.tap('Escape')) {
+    } else if (this.state !== 'fighter_down_win' && (i.tap('KeyR') || i.tap('Escape'))) {
       this.toTitle();
       return;
     }
@@ -85086,9 +85156,11 @@ Object.assign(MARE.soundData, {
       this.retryFighterDown();
       return;
     }
-    if (this.state === 'fighter_down_win' && (i.tap('Enter') || i.tap('Space') || mode.resultTime >= T.resultSeconds)) {
-      this.finishFighterDown();
-      return;
+    if (this.state === 'fighter_down_win') {
+      if (mode.resultTime < .2) i.clear();else if (i.tap('Enter') || i.tap('Space')) {
+        this.finishFighterDown();
+        return;
+      }
     }
     mode.update(dt);
   };
@@ -91084,7 +91156,7 @@ MARE.DreadnoughtArmHitboxes = {
     }
     difficultyUnlocked07(id) {
       const d = this.data.difficulty07;
-      return id === 'easy' || id === 'normal' && d.campaign.easy || id === 'hardcore' && d.campaign.normal && d.rush.easy;
+      return id === 'easy' || id === 'normal' || id === 'hardcore' && d.campaign.normal;
     }
     selectDifficulty07(id) {
       if (!valid(id) || !this.difficultyUnlocked07(id)) return false;
@@ -92052,10 +92124,10 @@ MARE.DreadnoughtArmHitboxes = {
       d = M.Difficulties07[id],
       unlocked = g.progress.difficultyUnlocked07(id) || false;
     UI.lines(c, unlocked ? g.difficultyReturn07 === 'boss_mode' ? 'BOSS HP X' + M.DifficultyProfiles12[id].bossHP + ' / PICKUPS ' + {
-      easy: 9,
+      easy: M.PowerupTuning08.thresholds.length,
       normal: 3,
       hardcore: 2
-    }[id] + ' / SHARED SESSION' : M.difficultyBrief1003?.(g, id, d) || 'SPAWN X' + d.spawn + ' / HP X' + d.hp + ' / SPEED X' + d.speed + ' / DAMAGE X' + d.damage + ' / RECOVERY X' + d.recovery : id === 'normal' ? 'CLEAR THE EASY CAMPAIGN TO UNLOCK.' : 'CLEAR NORMAL CAMPAIGN AND EASY BOSS RUSH.', 24, 194, 272, 2);
+    }[id] + ' / SHARED SESSION' : M.difficultyBrief1003?.(g, id, d) || 'SPAWN X' + d.spawn + ' / HP X' + d.hp + ' / SPEED X' + d.speed + ' / DAMAGE X' + d.damage + ' / RECOVERY X' + d.recovery : 'CLEAR THE NORMAL CAMPAIGN TO UNLOCK.', 24, 194, 272, 2);
     UI.footer(c, g, 'ENTER SELECT - ESC BACK');
     UI.regions[UI.regions.length - 1].action = () => UI.closeDifficulty07(g);
   };
@@ -93891,7 +93963,7 @@ MARE.DreadnoughtArmHitboxes = {
 
   const gp = M.Game.prototype;
   M.PowerupTuning08 = {
-    thresholds: [.9, .8, .7, .6, .5, .4, .3, .2, .1],
+    thresholds: [.9, .7, .5, .3, .1],
     drops: [{
       kind: 'power',
       weight: 3
@@ -95039,7 +95111,7 @@ MARE.DreadnoughtArmHitboxes = {
     addCap: 1.25
   };
   const MP = M.Multiplayer = {
-    version: 'WEB-PLAYTEST-RC2',
+    version: 'WEB-PLAYTEST-RC3-PASS-B',
     serial: 0
   };
   M.worldGame = g => g?.__mpWorld || g;
@@ -95854,8 +95926,8 @@ MARE.DreadnoughtArmHitboxes = {
       super(g, s);
       if (M.isCoop(g)) {
         for (const p of g.players) p.input.clear();
-        this.reticles = g.players.map((p, n) => Object.assign(n ? new M.FighterDownReticleController() : this.reticle, {
-          x: n ? 205 : 115,
+        this.reticles = g.players.map((p, n) => Object.assign(n ? new M.FighterDownReticleController(this.target) : this.reticle, {
+          x: this.target.x + (n ? 1 : -1) * Math.max(45, M.FighterDownTuning.reticle.exclusionRadius),
           playerId: p.playerId
         }));
         this.fireTurn10 = 0;
@@ -101220,7 +101292,7 @@ MARE.WaveAuthoring12 = {
     g = M.worldGame(g);
     if (!b.thresholds08 || g.boss !== b || !M.thresholdModeEligibleR1(g) || false) return;
     const difficulty = g.runDifficulty07 || 'easy',
-      thresholds = difficulty === 'easy' ? [.9, .8, .7, .6, .5, .4, .3, .2, .1] : difficulty === 'normal' ? [.75, .5, .25] : [.66, .33],
+      thresholds = difficulty === 'easy' ? M.PowerupTuning08.thresholds : difficulty === 'normal' ? [.75, .5, .25] : [.66, .33],
       choices = ['heal', 'shield', ...(difficulty === 'hardcore' ? ['life'] : []), 'power', 'support_upgrade'];
     const hp = b.members ? b.members.reduce((sum, m) => sum + Math.max(0, m.hp), 0) : b.hp,
       ratio = hp / b.maxHP;
@@ -103679,7 +103751,7 @@ MARE.HostileLaserContractG = {
     const line = actions.map(([a, t]) => key(a) + ' ' + t).join(' / ');
     return [line.slice(0, 52), key('up') + '/' + key('down') + ' SELECT'];
   };
-  C.footerText = g => ['play', 'stageIntro', 'fighter_down_play'].includes(g.state) ? ['fire', 'support', 'bomb', 'focus', 'pause'].map(a => C.gameLabel(g, a) + ' ' + a.toUpperCase()).join(' / ') : C.menuHints(g).join(' / ') + ' / F10 CONTROLS';
+  C.footerText = g => g.state === 'fighter_down_win' ? C.menuLabel(g, 'confirm') + ' CONTINUE' : ['play', 'stageIntro', 'fighter_down_play'].includes(g.state) ? ['fire', 'support', 'bomb', 'focus', 'pause'].map(a => C.gameLabel(g, a) + ' ' + a.toUpperCase()).join(' / ') : C.menuHints(g).join(' / ') + ' / F10 CONTROLS';
   UI.footer = function (c, g) {
     UI.button(c, 'BACK', 12, 216, false, () => UI.back(g));
     const h = C.menuHints(g);
@@ -103693,7 +103765,7 @@ MARE.HostileLaserContractG = {
     c.save();
     c.fillStyle = '#101820';
     c.fillRect(0, 234, 320, 6);
-    let text = C.menuHints(g)[0];
+    let text = s === 'fighter_down_win' ? C.menuLabel(g, 'confirm') + ' CONTINUE' : C.menuHints(g)[0];
     if (s === 'fighter_down_play') {
       const d = g.mpDevices?.[0],
         kind = Number.isInteger(d) ? 'gamepad' : 'keyboard';
@@ -105739,7 +105811,7 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
   };
 })(MARE);
 
-;(function(M){M.version='PROJECT Z — WEB PLAYTEST RC2';M.WebRelease=Object.freeze({id:'RC2',baseline:'10.0.36',baselineFingerprint:'3700a295f9a711e565bcbcbfab0d8ad986b81436cb45df9170eb9cd65935bfce'});})(MARE);
+;(function(M){M.version='PROJECT Z — WEB PLAYTEST RC3 - PASS B CANDIDATE';M.WebRelease=Object.freeze({id:'RC3-PASS-B',baseline:'10.0.36-PRE-B',baselineFingerprint:'c3f9027ffb725e38ec142e308ee0407c8ccfca528b31cef98931403843f50338',officialParent:'10.0.36',status:'CANDIDATE_NOT_DESIGNER_VALIDATED'});})(MARE);
 ;
 "use strict";
 

@@ -1,12 +1,14 @@
 {
-  "title": "PROJECT Z — WEB PLAYTEST RC2",
-  "rc": "RC2",
-  "status": "FROZEN_EXTERNAL_PLAYTEST",
-  "sourceVersion": "10.0.36",
-  "sourceFingerprint": "3700a295f9a711e565bcbcbfab0d8ad986b81436cb45df9170eb9cd65935bfce",
-  "sourceRuntimeSHA256": "ae9e7d7a107ddb9df7b562c7f6dcfdda36120042ebd1410cd9dd069c57ee2fa2",
-  "buildUTC": "2026-10-28T09:12:54.156535+00:00",
-  "payloadFingerprint": "82b8b5b8068ef798d657b82b6fbfb47971114a193d6d7ce34bba2cb4e3af5154",
+  "title": "PROJECT Z — WEB PLAYTEST RC3 - PASS B CANDIDATE",
+  "rc": "RC3-PASS-B",
+  "status": "CANDIDATE_NOT_DESIGNER_VALIDATED",
+  "sourceVersion": "10.0.36-PRE-B",
+  "officialParent": "10.0.36",
+  "sourceFingerprint": "c3f9027ffb725e38ec142e308ee0407c8ccfca528b31cef98931403843f50338",
+  "sourceRuntimeSHA256": "af339dc98df7d9ad28a53ce08c49f2fe7bdaf6f6c88235212fe4ef3660b24d60",
+  "buildUTC": "2026-10-28T12:37:57.816435+00:00",
+  "payloadFingerprint": "d6d1ddc0f8d31092c7c130b107dc2744dd20d31a0edf182943a09081d84e89a5",
   "storageNamespace": "project-z-web-beta:",
-  "multiplayer": "LOCAL_COUCH_COOP_ONLY"
+  "multiplayer": "LOCAL_COUCH_COOP_ONLY",
+  "designerValidation": "PENDING"
 }
