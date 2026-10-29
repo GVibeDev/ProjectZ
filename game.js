@@ -3554,7 +3554,7 @@ MARE.musicTrackGain = {
       const n = M.assetInfo._font.indexOf(s[i]);
       if (s[i] === '%') {
         c.save();
-        c.fillStyle = '#e2dbc0';
+        c.fillStyle = color || '#e2dbc0';
         ['100', '001', '010', '100', '001'].forEach((row, yy) => {
           for (let xx = 0; xx < 3; xx++) if (row[xx] === '1') c.fillRect(Math.round(x + i * 4 * scale + xx * scale), Math.round(y + yy * scale), scale, scale);
         });
@@ -4015,6 +4015,9 @@ MARE.musicTrackGain = {
     return result;
   };
   C.rebind = function (kind, profile, action, value, swap = false) {
+    if (kind === 'keyboard' && value === 'F3' && false) return {
+      error: 'F3 RESERVED FOR DEBUG'
+    };
     if (kind === 'keyboard' && ['F10', 'Escape'].includes(value)) return {
       error: 'ESC CANCELS / F10 RECOVERS'
     };
@@ -83866,7 +83869,7 @@ Object.assign(MARE.soundData, {
     }
     M.text(c, 'SECTOR ' + M.STAGES[entry.stage].number, 211, 157);
     const desc = known ? boss ? M.MenuCopy.bosses[entry.kind] : M.MenuCopy.hostiles[entry.kind] || M.MenuCopy.hostiles[entry.kind.replace(/^z[2345]_/, '')] : 'ENCOUNTER THIS CONTACT IN A NORMAL MISSION TO RECOVER ITS DOSSIER.';
-    UI.lines(c, '---', 34, 175, 252, 3);
+    UI.lines(c, desc || '---', 34, 175, 252, 3);
     UI.footer(c, g, boss && flags.training_available ? 'ENTER PRACTICE - ESC ARCHIVE' : 'ESC BACK TO ARCHIVE');
   };
   UI.mixerPointerG = function (g, channel, x) {
@@ -96197,7 +96200,7 @@ MARE.DreadnoughtArmHitboxes = {
         M.text(c, 'PLAYER ' + (n + 1), x + 49, 110);
         add('ship' + n, ship.name, x + 49, 121, 83, 18, () => U.ship(g, n), !enabled);
         add('device' + n, solo && n === 1 ? 'NOT PLAYING' : M.ControlsR2A.deviceLabel(g, n) + (enabled && M.ControlsR2A.available(g, n) ? ' / OK' : ''), x + 7, 146, 125, 17, () => U.device(g, n), !enabled);
-        M.text(c, solo && n === 1 ? 'INACTIVE' : !M.ControlsR2A.available(g, n) ? 'DISCONNECTED' : M.ControlsR2A.label(Number.isInteger(g.mpDevices?.[n]) ? 'gamepad' : 'keyboard', Number.isInteger(g.mpDevices?.[n]) ? 'game' : solo || null ? 'solo' : 'p' + (n + 1), 'fire', false, Number.isInteger(g.mpDevices?.[n]) ? M.ControlsR2A.resolve(g, n) : null) + ' FIRE', x + 7, 138);
+        M.text(c, solo && n === 1 ? 'INACTIVE' : !enabled && null ? 'REMOTE' : !M.ControlsR2A.available(g, n) ? 'DISCONNECTED' : M.ControlsR2A.label(Number.isInteger(g.mpDevices?.[n]) ? 'gamepad' : 'keyboard', Number.isInteger(g.mpDevices?.[n]) ? 'game' : solo || null ? 'solo' : 'p' + (n + 1), 'fire', false, Number.isInteger(g.mpDevices?.[n]) ? M.ControlsR2A.resolve(g, n) : null) + ' FIRE', x + 7, 138);
         const ready = g.mpReady[n];
         add('ready' + n, ready ? 'READY' : 'NOT READY', x + 7, 168, 125, 17, () => {
           g.mpReady[n] = !g.mpReady[n];
@@ -99080,7 +99083,7 @@ MARE.BossAnimationContract1008 = {
   function pointSeg(x, y, a, b) {
     const dx = b[0] - a[0],
       dy = b[1] - a[1],
-      t = M.clamp(((x - a[0]) * dx + (y - a[1]) * dy) / 1, 0, 1);
+      t = M.clamp(((x - a[0]) * dx + (y - a[1]) * dy) / (dx * dx + dy * dy || 1), 0, 1);
     return Math.hypot(x - a[0] - dx * t, y - a[1] - dy * t);
   }
   const turnH = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
@@ -99894,7 +99897,7 @@ MARE.BossAnimationContract1008 = {
       dx = Math.cos(b.h3aRouteAngle),
       dy = Math.sin(b.h3aRouteAngle);
     let length = 0;
-    for (let d = 0; d <= distance; d += Math.min(1, 1)) {
+    for (let d = 0; d <= distance; d += Math.min(1, distance - d || 1)) {
       if (!legalHead(b, g, b.x + dx * d, b.y + dy * d)) break;
       length = d;
       if (d === distance) break;
@@ -101519,7 +101522,7 @@ MARE.WaveAuthoring12 = {
   const pointSegment = (px, py, x0, y0, x1, y1) => {
     const dx = x1 - x0,
       dy = y1 - y0,
-      t = M.clamp(((px - x0) * dx + (py - y0) * dy) / 1, 0, 1);
+      t = M.clamp(((px - x0) * dx + (py - y0) * dy) / (dx * dx + dy * dy || 1), 0, 1);
     return (px - x0 - dx * t) ** 2 + (py - y0 - dy * t) ** 2;
   };
   const cross = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
@@ -101860,7 +101863,7 @@ MARE.HostileLaserContractG = {
     queueGroups = new WeakMap();
   let serial = 0;
   const identity = o => {
-    if (!o || typeof o !== 'object') return String('world');
+    if (!o || typeof o !== 'object') return String(o || 'world');
     const token = o.netId ?? o.spawnId ?? o.playerId;
     let s = objects.get(o);
     if (!s || s.token !== token) {
@@ -103354,7 +103357,7 @@ MARE.HostileLaserContractG = {
       b.f1ShotCycles++;
       if (b.phase === 2 && b.f1ShotCycles === 3) b.f1ChaseAt = b.f1Clock + 6;
     }
-    return true;
+    return s || true;
   };
   F.beginChase = function (b, g) {
     b.f1ShotCycles = 0;
@@ -103921,6 +103924,7 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
           g.mpReady[n] = false;
           changed = true;
         }
+        if (changed && null) null.sendReady(g);
       }
       return r;
     }
@@ -103972,6 +103976,7 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
       c.initialPrimariesR2B ??= [E.slot(this.progress, 0).primary, E.slot(this.progress, 1).primary];
       if (c.initialPrimariesR2B.some((id, n) => !E.localChoiceValid(this, n, id))) return Promise.reject(Error('PRIMARY LOCKED'));
     }
+    if (fresh && false && (!Array.isArray(c.initialPrimariesR2B) || JSON.stringify(c.initialPrimariesR2B) !== JSON.stringify(null.primaryPairR2B))) return Promise.reject(Error('PRIMARY LAUNCH MISMATCH'));
     const serial = this.loadoutStartSerialR2B = (this.loadoutStartSerialR2B || 0) + 1,
       result = start.call(this, c, stage),
       launch = this._launch07;
@@ -104242,7 +104247,7 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
     M.text(c, 'PLAYER ' + (n + 1), x + 7, 103);
     M.sprite(c, 'player/' + ship.sprite, x + 24, 133);
     A.add(c, g, 'ship' + n, ship.name, x + 49, 114, 83, 16, () => A.ship(g, n), !enabled);
-    M.text(c, inactive ? 'INACTIVE' : M.ControlsR2A.label(Number.isInteger(g.mpDevices?.[n]) ? 'gamepad' : 'keyboard', Number.isInteger(g.mpDevices?.[n]) ? 'game' : solo || null ? 'solo' : 'p' + (n + 1), 'fire', false, Number.isInteger(g.mpDevices?.[n]) ? M.ControlsR2A.resolve(g, n) : null) + ' FIRE', x + 49, 134);
+    M.text(c, !enabled && null ? 'REMOTE' : inactive ? 'INACTIVE' : M.ControlsR2A.label(Number.isInteger(g.mpDevices?.[n]) ? 'gamepad' : 'keyboard', Number.isInteger(g.mpDevices?.[n]) ? 'game' : solo || null ? 'solo' : 'p' + (n + 1), 'fire', false, Number.isInteger(g.mpDevices?.[n]) ? M.ControlsR2A.resolve(g, n) : null) + ' FIRE', x + 49, 134);
     A.add(c, g, 'primary' + n, inactive ? 'NOT PLAYING' : entry ? M.WEAPONS[entry.index].name : 'WAITING PRIMARY', x + 7, 145, 125, 15, () => E.cyclePrimary(g, n), !enabled);
     A.add(c, g, 'device' + n, inactive ? 'NOT PLAYING' : M.ControlsR2A.deviceLabel(g, n) + (enabled && M.ControlsR2A.available(g, n) ? ' / OK' : ''), x + 7, 162, 125, 15, () => A.device(g, n), !enabled);
     const ready = g.mpReady[n];
@@ -105993,7 +105998,7 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
   };
 })(MARE);
 
-;(function(M){M.version='Project Z / 10.0.38-C2-F1 RUNTIME PARITY CANDIDATE - TEST ONLY - NOT DESIGNER VALIDATED';M.WebRelease=Object.freeze({"id":"10.0.38-C2-F1-WEB","version":"10.0.38-C2-F1","baseline":"10.0.38-C2-F1","officialParent":"10.0.38","parentCandidate":"10.0.38-C2","parentCandidateSourceFingerprint":"25e43b64baa678b5445edea68787263a3124f6eb90b27cf49b1d4036e798e30e","baselineFingerprint":"50d14a90f5f8daae3a9f4ab17151c26b3574a1216698dc4302fe40ddcbbeda0e","status":"CANDIDATE_NOT_DESIGNER_VALIDATED","scope":["C2_VISUAL_FIXES_PRESERVED","CASTOR_POLLUX_MOVEMENT_PARITY"],"additionalImpactScanFindings":"DIAGNOSTIC_ONLY_NOT_FIXED"});M.Multiplayer.version='10.0.38-C2-F1-WEB';M.Multiplayer.build='PZ-1038-C2F1-PARITY-CANDIDATE-WEB';})(MARE);
+;(function(M){M.version='Project Z / 10.0.38-C2-F3 CANDIDATE - TEST ONLY - NOT DESIGNER VALIDATED';M.WebRelease=Object.freeze({"id":"10.0.38-C2-F3-WEB","version":"10.0.38-C2-F3","baseline":"10.0.38-C2-F3","officialParent":"10.0.38","parentCandidate":"10.0.38-C2-F1","baselineFingerprint":"72a132ae9a9a2decd748b134c48113ce2b2a46908c1573e1bf6613652f307cb8","inputFingerprint":"50d14a90f5f8daae3a9f4ab17151c26b3574a1216698dc4302fe40ddcbbeda0e","status":"CANDIDATE_NOT_DESIGNER_VALIDATED","scope":["CANONICAL_COMPILER","SEVEN_VALUE_EXPRESSIONS_RESTORED","C2_F1_PRESERVED"]});M.Multiplayer.version='10.0.38-C2-F3-WEB';M.Multiplayer.build='PZ-1038-C2F3-COMPILER-PARITY-WEB';})(MARE);
 ;
 "use strict";
 

@@ -1,25 +1,26 @@
 {
-  "title": "Project Z 10.0.38-C2-F1 — Castor/Pollux Runtime Movement Parity Fix",
-  "version": "10.0.38-C2-F1",
+  "title": "Project Z 10.0.38-C2-F3 - Compiler Remediation Candidate - TEST ONLY",
+  "version": "10.0.38-C2-F3",
   "status": "CANDIDATE_TEST_ONLY_NOT_DESIGNER_VALIDATED",
-  "sourceFingerprint": "50d14a90f5f8daae3a9f4ab17151c26b3574a1216698dc4302fe40ddcbbeda0e",
+  "sourceFingerprint": "72a132ae9a9a2decd748b134c48113ce2b2a46908c1573e1bf6613652f307cb8",
   "officialParent": "10.0.38",
-  "parentSourceFingerprint": "7364e419b136718dc831cb98d07910581cdabb898fb5bc0a8316d914f50f0c68",
-  "DEVParentCommit": "666c0aabcde45b6de01b71b735325abd3567003d",
-  "RuntimeParentLocalCommit": "9c45c7a9639eefa34068f637d2a8e0f88c59eb40",
-  "payloadFingerprint": "866c406706de423898222f67a14eda5cf4f84a1c437777ffc36db6513ccb278a",
+  "parentSourceFingerprint": "50d14a90f5f8daae3a9f4ab17151c26b3574a1216698dc4302fe40ddcbbeda0e",
+  "DEVParentCommit": "b43306de5b1ab1c25559d0a5c3e40dfabf52f544",
+  "RuntimeParentLocalCommit": null,
+  "payloadFingerprint": "6e6e91f68c8dd035bf302433c33ea1c17555bfc19b1a1e4fc41fb717d2e7d54d",
   "memoryCount": 5,
   "font": "AVA 12px monochrome native raster",
   "storageNamespace": "project-z-web-beta:",
   "multiplayer": "LOCAL_COUCH_COOP_ONLY",
-  "designerValidation": "PENDING_C2F1",
-  "buildUTC": "2026-10-29T11:48:11.377240+00:00",
+  "designerValidation": "PENDING_C2F3",
+  "buildUTC": "2026-10-29T14:20:21Z",
   "scope": [
-    "COMPILER_OR_RULE",
-    "CASTOR_POLLUX_MOVEMENT_PARITY"
+    "CANONICAL_COMPILER",
+    "SEVEN_VALUE_EXPRESSIONS_RESTORED",
+    "C2_F1_PRESERVED"
   ],
-  "parentRuntimePayloadFingerprint": "6bc8fc98d5bcbfce01337956f3f616df9791d282e8a93b19cde2efcc3f9f14d3",
-  "candidateFingerprint": "25e43b64baa678b5445edea68787263a3124f6eb90b27cf49b1d4036e798e30e",
+  "parentRuntimePayloadFingerprint": "866c406706de423898222f67a14eda5cf4f84a1c437777ffc36db6513ccb278a",
+  "candidateFingerprint": "72a132ae9a9a2decd748b134c48113ce2b2a46908c1573e1bf6613652f307cb8",
   "protocolChanged": false,
   "assetsChanged": 0,
   "fixStatus": {
@@ -27,8 +28,13 @@
     "C2-02": "PASS",
     "C2-03": "PASS"
   },
-  "parentCandidate": "10.0.38-C2",
-  "parentCandidateSourceFingerprint": "25e43b64baa678b5445edea68787263a3124f6eb90b27cf49b1d4036e798e30e",
+  "parentCandidate": "10.0.38-C2-F1",
+  "parentCandidateSourceFingerprint": "50d14a90f5f8daae3a9f4ab17151c26b3574a1216698dc4302fe40ddcbbeda0e",
   "C2VisualValidation": "DESIGNER_APPROVED_PRESERVED",
-  "additionalImpactFindings": "DOCUMENTED_NOT_FIXED"
+  "additionalImpactFindings": "SEVEN_EXPRESSIONS_RESTORED_C2F3",
+  "inputFingerprint": "50d14a90f5f8daae3a9f4ab17151c26b3574a1216698dc4302fe40ddcbbeda0e",
+  "sourceSnapshotCommit": "b43306de5b1ab1c25559d0a5c3e40dfabf52f544",
+  "officialParentSourceFingerprint": "7364e419b136718dc831cb98d07910581cdabb898fb5bc0a8316d914f50f0c68",
+  "officialDEVCommit": "666c0aabcde45b6de01b71b735325abd3567003d",
+  "officialRuntimeLocalCommit": "9c45c7a9639eefa34068f637d2a8e0f88c59eb40"
 }
