@@ -6797,6 +6797,7 @@ MARE.musicTrackGain = {
 (function (M) {
   'use strict';
 
+  const giantScrollC2 = new WeakMap();
   M.Stage = class {
     constructor(id = 'STAGE_01') {
       this.def = M.STAGES[id];
@@ -6864,10 +6865,34 @@ MARE.musicTrackGain = {
         landmarks = menu ? M.MENU.landmarks : this.def.landmarks;
       for (const mark of landmarks) {
         if (mark.afterLayer !== afterLayer) continue;
-        const elapsed = this.time - (mark.start || 0);
-        if (!menu && (this.time < mark.start || this.time > mark.end)) continue;
+        const giant = !menu && !g.practice && this.def.id === 'STAGE_01' && mark.id === 'giant' && mark.asset === 'backgrounds/giant';
+        if (!menu && (this.time < mark.start || !giant && this.time > mark.end)) continue;
+        if (giant && (this.finished > 0 || g.state === 'clear' || g.state === 'victory')) continue;
+        let elapsed = this.time - (mark.start || 0);
+        if (giant) {
+          const clock = g.worldClock12 ?? this.time;
+          let scroll = giantScrollC2.get(this);
+          if (!scroll || scroll.start !== mark.start || this.time < scroll.stageTime - 1e-6 || clock < scroll.lastClock - 1e-6) {
+            scroll = {
+              start: mark.start,
+              origin: clock - elapsed,
+              stageTime: this.time,
+              lastClock: clock
+            };
+            giantScrollC2.set(this, scroll);
+          }
+          elapsed = clock - scroll.origin;
+          scroll.stageTime = this.time;
+          scroll.lastClock = clock;
+        }
         const x = mark.x + (mark.vxSine ? Math.sin(elapsed * mark.sineSpeed) * mark.vxSine : 0),
           y = mark.y + (mark.speed || 0) * elapsed;
+        if (giant) {
+          const a = M.assetInfo[mark.asset],
+            scale = mark.scale ?? 1,
+            anchor = a?.anchor?.y ?? (a?.h ?? 0) / 2;
+          if (a && Math.round(y - anchor * scale) >= M.H) continue;
+        }
         M.sprite(c, mark.asset, x, y, Math.floor(g.clock * mark.animationSpeed) % mark.frames, mark.scale);
       }
     }
@@ -87177,38 +87202,46 @@ Object.assign(MARE.soundData, {
       }
     }
     draw(c, g) {
-      if (this.dead) return super.draw(c, g);
-      if (this.kind === 'infested_tower') {
-        M.withBossScale(c, this.x, this.y, K.towerScale, () => V.drawTower(c, this.x, this.y, this.bodyFrame));
-        return;
-      }
-      if (this.kind === 'crystal_cruiser') {
-        const a = M.assetInfo[M.Stage3Catalog.actors.cruiser.asset],
-          points = this.hardpoints(),
-          original = M.Stage3Catalog.actors.cruiser.coordinates.needle_muzzles;
-        M.Stage3Catalog.actors.cruiser.coordinates.needle_muzzles = points;
-        try {
-          M.withBossScale(c, this.x, this.y, K.cruiserScale, () => V.drawCruiser(c, this.x - a.anchor.x, this.y - a.anchor.y, {
-            body: this.phase - 1,
-            needle: this.needleFlash > 0 ? 2 : 0,
-            missile: this.missileFlash > 0 ? 2 : this.missileTimer < .4 ? 1 : 0,
-            bay: this.bayFlash > 0 ? 3 : this.phase === 2 && this.carrierTimer < .5 ? 1 : 0
-          }));
-        } finally {
-          M.Stage3Catalog.actors.cruiser.coordinates.needle_muzzles = original;
+      const collapse = this.dead && ['infested_tower', 'crystal_cruiser'].includes(this.kind);
+      if (this.dead && !collapse) return super.draw(c, g);
+      if (collapse && (this.deathAge >= M.BOSS_DEATH_FX.fragments || Math.floor(this.dead * 18) % 2 === 0)) return;
+      const alpha = c.globalAlpha;
+      if (collapse) c.globalAlpha = this.flash > 0 ? .72 : 1;
+      try {
+        if (this.kind === 'infested_tower') {
+          M.withBossScale(c, this.x, this.y, this.reworkScale, () => V.drawTower(c, this.x, this.y, this.bodyFrame));
+          return;
         }
-        return;
+        if (this.kind === 'crystal_cruiser') {
+          const a = M.assetInfo[M.Stage3Catalog.actors.cruiser.asset],
+            points = this.hardpoints(),
+            original = M.Stage3Catalog.actors.cruiser.coordinates.needle_muzzles;
+          M.Stage3Catalog.actors.cruiser.coordinates.needle_muzzles = points;
+          try {
+            M.withBossScale(c, this.x, this.y, this.reworkScale, () => V.drawCruiser(c, this.x - a.anchor.x, this.y - a.anchor.y, {
+              body: this.phase - 1,
+              needle: this.needleFlash > 0 ? 2 : 0,
+              missile: this.missileFlash > 0 ? 2 : this.missileTimer < .4 ? 1 : 0,
+              bay: this.bayFlash > 0 ? 3 : this.phase === 2 && this.carrierTimer < .5 ? 1 : 0
+            }));
+          } finally {
+            M.Stage3Catalog.actors.cruiser.coordinates.needle_muzzles = original;
+          }
+          return;
+        }
+        if (this.scriptedDefeat) this.animationState = 'SCRIPTED_DEFEAT';
+        V.drawCommander(c, this.x, this.y, {
+          body: this.bodyFrame,
+          spear: ['pierce', 'circular'].includes(this.state) ? 2 : this.state === 'telegraph' ? 1 : 0,
+          cannon: this.cannonFrame,
+          angle: this.spearAngle,
+          phase2: this.phase === 2,
+          sweep: this.state === 'circular' ? M.reworkCircularFrame(this) : null,
+          arc: null
+        });
+      } finally {
+        if (collapse) c.globalAlpha = alpha;
       }
-      if (this.scriptedDefeat) this.animationState = 'SCRIPTED_DEFEAT';
-      V.drawCommander(c, this.x, this.y, {
-        body: this.bodyFrame,
-        spear: ['pierce', 'circular'].includes(this.state) ? 2 : this.state === 'telegraph' ? 1 : 0,
-        cannon: this.cannonFrame,
-        angle: this.spearAngle,
-        phase2: this.phase === 2,
-        sweep: this.state === 'circular' ? M.reworkCircularFrame(this) : null,
-        arc: null
-      });
     }
   };
   M.ReworkCruiserContract = {
@@ -105960,7 +105993,7 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
   };
 })(MARE);
 
-;(function(M){M.version='Project Z 10.0.38 / Memory & Archive Integration';M.WebRelease=Object.freeze({"id":"10.0.38-WEB","baseline":"10.0.38","version":"10.0.38","officialParent":"10.0.37","baselineFingerprint":"7364e419b136718dc831cb98d07910581cdabb898fb5bc0a8316d914f50f0c68","approvedCandidateFingerprint":"3066db829be4ce9bd75e90cf66654e8fdb96617e8d3067c250e9d8ad2094914e","approvedCandidateCommit":"e44f8ca3d80a4b90fbed9bf5482dde45fb9b22bb","approvedRuntimeCommit":"a8e995919c4919d264541994b3fbda228fb79bd8","status":"OFFICIAL_DESIGNER_VALIDATED"});M.Multiplayer.version='10.0.38-WEB';M.Multiplayer.build='PZ-10-1038-C1-VALIDATED-WEB';})(MARE);
+;(function(M){M.version='Project Z / 10.0.38-C2 VISUAL CANDIDATE - TEST ONLY - NOT DESIGNER VALIDATED';M.WebRelease=Object.freeze({"id":"10.0.38-C2-WEB","baseline":"10.0.38-C2","version":"10.0.38-C2","officialParent":"10.0.38","baselineFingerprint":"25e43b64baa678b5445edea68787263a3124f6eb90b27cf49b1d4036e798e30e","officialParentFingerprint":"7364e419b136718dc831cb98d07910581cdabb898fb5bc0a8316d914f50f0c68","status":"CANDIDATE_NOT_DESIGNER_VALIDATED","scope":["C2-01","C2-02","C2-03"]});M.Multiplayer.version='10.0.38-C2-WEB';M.Multiplayer.build='PZ-1038-C2-VISUAL-CANDIDATE-WEB';})(MARE);
 ;
 "use strict";
 
