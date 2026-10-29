@@ -1,23 +1,22 @@
 {
-  "title": "Project Z 10.0.38-C2 — Visual Continuity & Boss Death Fixes",
-  "version": "10.0.38-C2",
+  "title": "Project Z 10.0.38-C2-F1 — Castor/Pollux Runtime Movement Parity Fix",
+  "version": "10.0.38-C2-F1",
   "status": "CANDIDATE_TEST_ONLY_NOT_DESIGNER_VALIDATED",
-  "sourceFingerprint": "25e43b64baa678b5445edea68787263a3124f6eb90b27cf49b1d4036e798e30e",
+  "sourceFingerprint": "50d14a90f5f8daae3a9f4ab17151c26b3574a1216698dc4302fe40ddcbbeda0e",
   "officialParent": "10.0.38",
   "parentSourceFingerprint": "7364e419b136718dc831cb98d07910581cdabb898fb5bc0a8316d914f50f0c68",
   "DEVParentCommit": "666c0aabcde45b6de01b71b735325abd3567003d",
   "RuntimeParentLocalCommit": "9c45c7a9639eefa34068f637d2a8e0f88c59eb40",
-  "payloadFingerprint": "2d519ed610b2766cd0bb7cecdf7250730549a8ce924d363fd064c8bcafd27a69",
+  "payloadFingerprint": "866c406706de423898222f67a14eda5cf4f84a1c437777ffc36db6513ccb278a",
   "memoryCount": 5,
   "font": "AVA 12px monochrome native raster",
   "storageNamespace": "project-z-web-beta:",
   "multiplayer": "LOCAL_COUCH_COOP_ONLY",
-  "designerValidation": "PENDING",
-  "buildUTC": "2026-10-29T06:55:18.921036+00:00",
+  "designerValidation": "PENDING_C2F1",
+  "buildUTC": "2026-10-29T11:48:11.377240+00:00",
   "scope": [
-    "C2-01",
-    "C2-02",
-    "C2-03"
+    "COMPILER_OR_RULE",
+    "CASTOR_POLLUX_MOVEMENT_PARITY"
   ],
   "parentRuntimePayloadFingerprint": "6bc8fc98d5bcbfce01337956f3f616df9791d282e8a93b19cde2efcc3f9f14d3",
   "candidateFingerprint": "25e43b64baa678b5445edea68787263a3124f6eb90b27cf49b1d4036e798e30e",
@@ -27,5 +26,9 @@
     "C2-01": "PASS",
     "C2-02": "PASS",
     "C2-03": "PASS"
-  }
+  },
+  "parentCandidate": "10.0.38-C2",
+  "parentCandidateSourceFingerprint": "25e43b64baa678b5445edea68787263a3124f6eb90b27cf49b1d4036e798e30e",
+  "C2VisualValidation": "DESIGNER_APPROVED_PRESERVED",
+  "additionalImpactFindings": "DOCUMENTED_NOT_FIXED"
 }

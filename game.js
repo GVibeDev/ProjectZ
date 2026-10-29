@@ -74514,7 +74514,7 @@ MARE.Stage4AudioAvailable = {
     phase = b => b.hp < b.maxHP * .5 ? 1 : 0;
   const move = (b, x, y, s, dt) => {
     const d = Math.hypot(x - b.x, y - b.y),
-      k = Math.min(1, s * (M.bossMoveDt12?.(dt, M.game) ?? dt) / 1);
+      k = Math.min(1, s * (M.bossMoveDt12?.(dt, M.game) ?? dt) / (d || 1));
     b.x += (x - b.x) * k;
     b.y += (y - b.y) * k;
   };
@@ -105993,7 +105993,7 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
   };
 })(MARE);
 
-;(function(M){M.version='Project Z / 10.0.38-C2 VISUAL CANDIDATE - TEST ONLY - NOT DESIGNER VALIDATED';M.WebRelease=Object.freeze({"id":"10.0.38-C2-WEB","baseline":"10.0.38-C2","version":"10.0.38-C2","officialParent":"10.0.38","baselineFingerprint":"25e43b64baa678b5445edea68787263a3124f6eb90b27cf49b1d4036e798e30e","officialParentFingerprint":"7364e419b136718dc831cb98d07910581cdabb898fb5bc0a8316d914f50f0c68","status":"CANDIDATE_NOT_DESIGNER_VALIDATED","scope":["C2-01","C2-02","C2-03"]});M.Multiplayer.version='10.0.38-C2-WEB';M.Multiplayer.build='PZ-1038-C2-VISUAL-CANDIDATE-WEB';})(MARE);
+;(function(M){M.version='Project Z / 10.0.38-C2-F1 RUNTIME PARITY CANDIDATE - TEST ONLY - NOT DESIGNER VALIDATED';M.WebRelease=Object.freeze({"id":"10.0.38-C2-F1-WEB","version":"10.0.38-C2-F1","baseline":"10.0.38-C2-F1","officialParent":"10.0.38","parentCandidate":"10.0.38-C2","parentCandidateSourceFingerprint":"25e43b64baa678b5445edea68787263a3124f6eb90b27cf49b1d4036e798e30e","baselineFingerprint":"50d14a90f5f8daae3a9f4ab17151c26b3574a1216698dc4302fe40ddcbbeda0e","status":"CANDIDATE_NOT_DESIGNER_VALIDATED","scope":["C2_VISUAL_FIXES_PRESERVED","CASTOR_POLLUX_MOVEMENT_PARITY"],"additionalImpactScanFindings":"DIAGNOSTIC_ONLY_NOT_FIXED"});M.Multiplayer.version='10.0.38-C2-F1-WEB';M.Multiplayer.build='PZ-1038-C2F1-PARITY-CANDIDATE-WEB';})(MARE);
 ;
 "use strict";
 
