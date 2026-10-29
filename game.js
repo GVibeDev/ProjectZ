@@ -4138,14 +4138,33 @@ MARE.musicTrackGain = {
     i.previousKeysR2A = {};
     i.inputContextR2A = '';
     i.lastDeviceR2A = 'keyboard';
+    i.autofireBlurKeysP3F1 = new Set();
+    i.autofireFocusReturnedP3F1 = false;
+    addEventListener('focus', () => {
+      i.autofireFocusReturnedP3F1 = !document.hidden;
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && document.hasFocus()) i.autofireFocusReturnedP3F1 = true;
+    });
+  };
+  C.autofireKeyboardP3F1 = function (g, code) {
+    if (!g) return false;
+    const coop = M.isCoop?.(g),
+      slots = coop && !null ? [0, 1] : [g.session?.localSlot || 0];
+    return slots.some(n => (g.mpDevices?.[n] ?? 'keyboard') === 'keyboard' && C.bindings.keyboard[coop ? 'p' + (n + 1) : 'solo'].autofire.includes(code));
   };
   C.key = function (i, e, on) {
     if (!on) {
       i.rawKeysR2A[e.code] = false;
       i.blockKeysR2A.delete(e.code);
+      i.autofireBlurKeysP3F1.delete(e.code);
       return;
     }
     if (e.ctrlKey || e.metaKey || e.target?.matches?.('input,select,textarea,[contenteditable=true]')) return;
+    if (!e.repeat && !i.rawKeysR2A[e.code] && i.autofireBlurKeysP3F1.has(e.code) && i.autofireFocusReturnedP3F1 && !document.hidden && document.hasFocus() && ['play', 'stageIntro'].includes(M.game?.state) && C.autofireKeyboardP3F1(M.game, e.code)) {
+      i.blockKeysR2A.delete(e.code);
+      i.autofireBlurKeysP3F1.delete(e.code);
+    }
     if (on) {
       if (!e.repeat && !i.rawKeysR2A[e.code]) i.rawPressedR2A[e.code] = true;
       i.rawKeysR2A[e.code] = true;
@@ -4159,13 +4178,21 @@ MARE.musicTrackGain = {
   };
   C.barrier = function (i, blur = false) {
     if (!i.rawKeysR2A) return;
-    for (const [k, v] of Object.entries(i.rawKeysR2A)) if (v) i.blockKeysR2A.add(k);
+    for (const [k, v] of Object.entries(i.rawKeysR2A)) if (v) {
+      if (blur) {
+        if (!i.blockKeysR2A.has(k)) i.autofireBlurKeysP3F1.add(k);
+      } else i.autofireBlurKeysP3F1.delete(k);
+      i.blockKeysR2A.add(k);
+    }
     for (const p of C.pads()) p.buttons.forEach((b, n) => {
       if (b?.pressed) i.blockPadsR2A.add(p.index + ':' + n);
     });
     i.rawPressedR2A = {};
     i.padEdgesR2A = {};
-    if (blur) i.rawKeysR2A = {};
+    if (blur) {
+      i.autofireFocusReturnedP3F1 = false;
+      i.rawKeysR2A = {};
+    }
   };
   C.context = g => ['play', 'stageIntro', 'fighter_down_play'].includes(g?.state) ? 'game' : g?.state + ':' + (g?.state === 'title' ? g.menuView : '');
   C.sample = function (i, g) {
@@ -4174,7 +4201,10 @@ MARE.musicTrackGain = {
     if (i.inputContextR2A !== ctx) {
       if (g.state === 'over' && !g.continueGuardA) C.openContinue(g);
       if (g.state !== 'over') g.continueGuardA = null;
-      for (const [k, v] of Object.entries(i.previousKeysR2A)) if (v && i.rawKeysR2A[k]) i.blockKeysR2A.add(k);
+      for (const [k, v] of Object.entries(i.previousKeysR2A)) if (v && i.rawKeysR2A[k]) {
+        i.blockKeysR2A.add(k);
+        i.autofireBlurKeysP3F1.delete(k);
+      }
       for (const [k, v] of Object.entries(i.rawPadsR2A)) if (v) i.blockPadsR2A.add(k);
       i.inputContextR2A = ctx;
     }
@@ -4314,7 +4344,8 @@ MARE.musicTrackGain = {
       }];
       for (const p of C.pads()) readers.push({
         ...C.read(i, 'gamepad', 'menu', p),
-        kind: 'gamepad'
+        kind: 'gamepad',
+        padIndexP3F1: p.index
       });
       const pad = M.menuPad10?.(C.pads());
       if (pad && !Array.from(i.blockPadsR2A).some(k => k.startsWith(pad.index + ':'))) i.padAxis = C.axis(pad);
@@ -4329,6 +4360,7 @@ MARE.musicTrackGain = {
     for (const r of readers) for (const [a, on] of Object.entries(r.down)) {
       let code = canonical[a];
       if (!code) continue;
+      if (a === 'autofire' && r.kind === 'gamepad' && g.session?.mode === 'local_coop' && g.state === 'pause' && g.mpDevices?.includes(r.padIndexP3F1)) continue;
       const mission = g.state === 'title' && g.menuView === 'mission',
         training = g.state === 'practice_menu';
       if (!game && r.kind === 'keyboard' && (a === 'tab' && (mission || training) || a === 'stage' && !mission || a === 'difficulty' && !mission && !training)) continue;
@@ -105998,7 +106030,7 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
   };
 })(MARE);
 
-;(function(M){M.version='Project Z / 10.0.38-C2-F3 CANDIDATE - TEST ONLY - NOT DESIGNER VALIDATED';M.WebRelease=Object.freeze({"id":"10.0.38-C2-F3-WEB","version":"10.0.38-C2-F3","baseline":"10.0.38-C2-F3","officialParent":"10.0.38","parentCandidate":"10.0.38-C2-F1","baselineFingerprint":"72a132ae9a9a2decd748b134c48113ce2b2a46908c1573e1bf6613652f307cb8","inputFingerprint":"50d14a90f5f8daae3a9f4ab17151c26b3574a1216698dc4302fe40ddcbbeda0e","status":"CANDIDATE_NOT_DESIGNER_VALIDATED","scope":["CANONICAL_COMPILER","SEVEN_VALUE_EXPRESSIONS_RESTORED","C2_F1_PRESERVED"]});M.Multiplayer.version='10.0.38-C2-F3-WEB';M.Multiplayer.build='PZ-1038-C2F3-COMPILER-PARITY-WEB';})(MARE);
+;(function(M){M.version='Project Z / 10.0.38-C2-F3-P3-F1 CANDIDATE - TEST ONLY - NOT DESIGNER VALIDATED';M.WebRelease=Object.freeze({"id":"10.0.38-C2-F3-P3-F1-WEB","version":"10.0.38-C2-F3-P3-F1","baseline":"10.0.38-C2-F3","officialParent":"10.0.38-C2-F3","parentCandidate":"10.0.38-C2-F3","baselineFingerprint":"2cd9b07f12a2516f40214023643b9d8b924a61550f6f2f79a89f7a486b95487c","inputFingerprint":"2cd9b07f12a2516f40214023643b9d8b924a61550f6f2f79a89f7a486b95487c","parentSourceFingerprint":"72a132ae9a9a2decd748b134c48113ce2b2a46908c1573e1bf6613652f307cb8","status":"CANDIDATE_NOT_DESIGNER_VALIDATED","scope":["F01_BLUR_AUTOFIRE_REARM","F02_PAUSED_COUCH_PAD_SINGLE_OWNER"]});M.Multiplayer.version='10.0.38-C2-F3-P3-F1-WEB';M.Multiplayer.build='PZ-1038-C2F3-P3F1-AUTOFIRE-WEB';})(MARE);
 ;
 "use strict";
 
