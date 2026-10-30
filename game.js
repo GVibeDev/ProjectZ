@@ -84883,6 +84883,7 @@ Object.assign(MARE.soundData, {
       this.game.state = 'fighter_down_failed';
       this.failed = true;
       this.resultTime = 0;
+      this.game.audio.clearFighterDownAudioP12();
       this.game.fx(this.target.x, this.target.y, 1, 'explosion');
       this.game.audio.sfx('damage');
       this.game.input.clear();
@@ -84894,6 +84895,7 @@ Object.assign(MARE.soundData, {
       this.elapsed = M.FighterDownR3.duration(this);
       this.won = true;
       this.resultTime = 0;
+      g.audio.clearFighterDownAudioP12();
       this.nextSpawn = this.schedule.length;
       g.enemies.pool.clear();
       this.strikes.clear();
@@ -85017,6 +85019,7 @@ Object.assign(MARE.soundData, {
       M.MenuUI.button(c, 'HOME', 134, 161, false, () => g.input.pulse('KeyR'));
     }
     dispose() {
+      this.game.audio.clearFighterDownAudioP12();
       this.closeVideo();
       this.pointer = null;
       this.pointerFire = false;
@@ -85071,6 +85074,7 @@ Object.assign(MARE.soundData, {
     start = proto.start,
     reset = proto.reset;
   proto.reset = function (...args) {
+    this.audio?.clearFighterDownAudioP12();
     reset.apply(this, args);
     this._fighterDownGateSatisfied = false;
   };
@@ -85157,6 +85161,7 @@ Object.assign(MARE.soundData, {
   };
   proto.pause = function (...args) {
     if (['fighter_down_play', 'fighter_down_intro'].includes(this.state)) {
+      this.audio.clearFighterDownAudioP12();
       this.fighterDownPauseReturn = this.state;
       this.state = 'fighter_down_pause';
       if (this.fighterDown.video) {
@@ -85242,34 +85247,100 @@ Object.assign(MARE.soundData, {
     return musicFor.call(this, boss, state);
   };
   M.Audio.prototype.update = function (active, boss, state) {
+    if (this.fighterDownVoicesP12?.size && M.game?.state !== 'fighter_down_play') this.clearFighterDownAudioP12();
     if (isModeState(M.game?.state)) return audioUpdate.call(this, M.game.state === 'fighter_down_play', null, 'fighter_down');
     return audioUpdate.call(this, active, boss, state);
   };
-  M.Audio.prototype.fighterDownCue = function (kind) {
-    const name = kind === 'fire' ? 'invictus_cannon' : 'invictus_impact',
-      buffer = this.buffers[name];
-    if (!this.ctx || this.muted) return;
-    if (!buffer) {
-      this.tone(kind === 'fire' ? 135 : 75, kind === 'fire' ? .10 : .22, .16, 'sawtooth', 28);
-      return;
+  const fdAudioP12 = M.FighterDownAudioP12 = Object.freeze({
+    fire: Object.freeze({
+      buffer: 'invictus_cannon',
+      gain: .55,
+      duration: .32,
+      attack: .004,
+      hold: .10
+    }),
+    impact: Object.freeze({
+      buffer: 'invictus_impact',
+      gain: .60,
+      duration: .46,
+      attack: .006,
+      hold: .23
+    }),
+    maxVoices: 4,
+    maxPerKind: 2,
+    cleanupFade: .006
+  });
+  function fdLevelP12(e, time) {
+    const age = Math.max(0, time - e.at),
+      p = e.params;
+    if (age < p.attack) return p.gain * age / p.attack;
+    if (age <= p.hold) return p.gain;
+    return p.gain * Math.max(0, (e.duration - age) / (e.duration - p.hold));
+  }
+  M.Audio.prototype.clearFighterDownAudioP12 = function () {
+    if (!this.fighterDownVoicesP12?.size) return;
+    const now = this.ctx.currentTime;
+    for (const e of this.fighterDownVoicesP12) {
+      if (e.stopping) continue;
+      e.stopping = true;
+      if (this.ctx.state !== 'running') {
+        try {
+          e.source.stop();
+        } catch {}
+        e.release();
+        continue;
+      }
+      e.gain.gain.cancelScheduledValues(now);
+      e.gain.gain.setValueAtTime(fdLevelP12(e, now), now);
+      e.gain.gain.linearRampToValueAtTime(0, now + fdAudioP12.cleanupFade);
+      try {
+        e.source.stop(now + fdAudioP12.cleanupFade);
+      } catch {
+        e.release();
+      }
     }
+  };
+  M.Audio.prototype.fighterDownCue = function (kind) {
+    const params = fdAudioP12[kind],
+      buffer = params && this.buffers[params.buffer];
+    if (!this.ctx || this.muted || this.levels?.sfx === 0 || !buffer) return false;
+    const voices = this.fighterDownVoicesP12 ??= new Set();
+    if (voices.size >= fdAudioP12.maxVoices || [...voices].filter(e => e.kind === kind).length >= fdAudioP12.maxPerKind) return false;
     const source = this.ctx.createBufferSource(),
       gain = this.ctx.createGain(),
-      duration = Math.min(buffer.duration, kind === 'fire' ? .20 : .32),
+      duration = Math.min(buffer.duration, params.duration),
       now = this.ctx.currentTime;
+    const e = {
+      source,
+      gain,
+      kind,
+      params,
+      duration,
+      at: now,
+      stopping: false,
+      released: false
+    };
     source.buffer = buffer;
-    gain.gain.setValueAtTime(kind === 'fire' ? .14 : .20, now);
-    gain.gain.exponentialRampToValueAtTime(.001, now + duration);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(params.gain, now + Math.min(params.attack, duration));
+    gain.gain.setValueAtTime(params.gain, now + Math.min(params.hold, duration));
+    gain.gain.linearRampToValueAtTime(0, now + duration);
     source.connect(gain);
     gain.connect(this.channels.effects);
     this.voices.add(source);
-    source.onended = () => {
+    voices.add(e);
+    e.release = () => {
+      if (e.released) return;
+      e.released = true;
+      voices.delete(e);
       this.voices.delete(source);
       source.disconnect();
       gain.disconnect();
     };
-    source.start();
+    source.onended = e.release;
+    source.start(now);
     source.stop(now + duration);
+    return true;
   };
   const Input = M.Input;
   M.Input = class extends Input {
@@ -106219,7 +106290,7 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
   };
 })(MARE);
 
-;(function(M){M.version='Project Z / 10.0.38-C2-F3-P3-F1-P1-1 CANDIDATE - TEST ONLY - NOT DESIGNER VALIDATED';M.WebRelease=Object.freeze({"version":"10.0.38-C2-F3-P3-F1-P1-1","status":"CANDIDATE_TEST_ONLY_NOT_DESIGNER_VALIDATED","officialParent":"10.0.38-C2-F3-P3-F1","parentDEVCommit":"d64248ef97f7bb7e1b8c619cf614a9058b43cad1","parentRuntimeCommit":"72a962d795c3edf7fb155382ecd9f64ce3be5e7b","scope":"STAGE1_RADIO_PRESENTATION_AND_SCOPED_LIFECYCLE_ONLY","id":"10.0.38-C2-F3-P3-F1-P1-1-WEB","inputFingerprint":"f71f6989d008298fc6cc0e3d04ad94e76ec99ebc7462f739ffb8f39b58609bda","parentSourceFingerprint":"2cd9b07f12a2516f40214023643b9d8b924a61550f6f2f79a89f7a486b95487c"});M.Multiplayer.version='10.0.38-C2-F3-P3-F1-WEB';M.Multiplayer.build='PZ-1038-C2F3-P3F1-AUTOFIRE-WEB';})(MARE);
+;(function(M){M.version='Project Z / 10.0.38-C2-F3-P3-F1-P1-1-P1-2 CANDIDATE - TEST ONLY - NOT DESIGNER VALIDATED';M.WebRelease=Object.freeze({"version":"10.0.38-C2-F3-P3-F1-P1-1-P1-2","status":"CANDIDATE_TEST_ONLY_NOT_DESIGNER_VALIDATED","officialParent":"10.0.38-C2-F3-P3-F1-P1-1","parentDEVCommit":"caff1d4ccccccc6d26d352a40d6d59c1fe16b0ed","parentRuntimeCommit":"93a6fd196a3c54d729b88e8c9bc9e87e35f6f8a1","scope":"FIGHTER_DOWN_LOCAL_CANNON_IMPACT_AUDIO_ONLY","id":"10.0.38-C2-F3-P3-F1-P1-1-P1-2-WEB","inputFingerprint":"a315141a014fabfb5061368149be07cb168f146e40185f97608b20d4c6ac8b00","parentSourceFingerprint":"f71f6989d008298fc6cc0e3d04ad94e76ec99ebc7462f739ffb8f39b58609bda"});M.Multiplayer.version='10.0.38-C2-F3-P3-F1-WEB';M.Multiplayer.build='PZ-1038-C2F3-P3F1-AUTOFIRE-WEB';})(MARE);
 ;
 "use strict";
 
