@@ -1130,7 +1130,7 @@
       "assets/landmarks/sws_landmarks_p3_atlas.png": "assets/graphics/stages/stage03/environment/sws_landmarks_p3_atlas.png",
       "assets/menu/intro_menu_bridge.png": "assets/graphics/ui/menu/intro_menu_bridge.png",
       "assets/music/projectxL4.mp3": "assets/audio/music/projectxL4.mp3",
-      "assets/music/projectx_fighter_down.mp3": "assets/audio/music/projectx_fighter_down.mp3",
+      "assets/music/projectx_fighter_down.mp3": "assets/audio/music/projectx_fighter_down.wav",
       "assets/music/projectz_alien_commander.mp3": "assets/audio/music/projectz_alien_commander.mp3",
       "assets/music/projectz_crystal_dreadnought.mp3": "assets/audio/music/projectz_crystal_dreadnought.mp3",
       "assets/music/projectz_crystal_parasite.mp3": "assets/audio/music/projectz_crystal_parasite.mp3",
@@ -8228,9 +8228,6 @@ MARE.presentationInfo = {
       addEventListener('keydown', this.key);
       this.gate.addEventListener('pointerdown', this.pointer);
       this.skip.onclick = () => this.finish('skip');
-      document.getElementById('replay-intro').onclick = () => {
-        if (this.game.state === 'title') this.begin();
-      };
     }
     begin() {
       if (this.phase === 'playing' || this.phase === 'transition') return;
@@ -106290,7 +106287,7 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
   };
 })(MARE);
 
-;(function(M){M.version='Project Z / 10.0.38-C2-F3-P3-F1-P1-1-P1-2-CLEAN - P1-3 CLOSED';M.WebRelease=Object.freeze({"version":"10.0.38-C2-F3-P3-F1-P1-1-P1-2-CLEAN","status":"CLEAN_CLOSURE_BUILD_NOT_OFFICIAL","officialParent":"10.0.38-C2-F3-P3-F1-P1-1","approvedFrozenParent":"10.0.38-C2-F3-P3-F1-P1-1-P1-2","parentDEVCommit":"caff1d4ccccccc6d26d352a40d6d59c1fe16b0ed","parentRuntimeCommit":"f6496bc888537ef1cd2544d8c8051a999511b6e9","closedExperimentCommit":"fc350479f16ed4d629f3922a2a1bf5d432223242","designerDecision":"RETAIN_ORIGINAL_LASER_RAY_AUDIO; NEW_CANDIDATES_REJECTED","scope":"P1_3_EXPERIMENT_REMOVED_P11_P12_PRESERVED","id":"10.0.38-C2-F3-P3-F1-P1-1-P1-2-CLEAN-WEB","inputFingerprint":"a0d510bf6acc59684ce5ebbcbf787df4fdc42247a6a172f50f2247ce5dfa7b13","parentSourceFingerprint":"a315141a014fabfb5061368149be07cb168f146e40185f97608b20d4c6ac8b00"});M.Multiplayer.version='10.0.38-C2-F3-P3-F1-WEB';M.Multiplayer.build='PZ-1038-C2F3-P3F1-AUTOFIRE-WEB';})(MARE);
+;(function(M){M.version='Project Z / 10.0.38-C2-F3-P3-F1-P1-1-P1-2-INTRO-P1-5-F1-FINAL-UI - CANDIDATE';M.WebRelease=Object.freeze({"version":"10.0.38-C2-F3-P3-F1-P1-1-P1-2-INTRO-P1-5-F1-FINAL-UI","status":"CANDIDATE_TEST_ONLY_NOT_DESIGNER_VALIDATED","officialParent":"10.0.38-C2-F3-P3-F1-P1-1-P1-2-INTRO-P1-5-F1","parentDEVCommit":"c8ae8c69d5e733ae682dcf13e66a96841262d80d","parentRuntimeCommit":"b918b50a3515d0bfee55a3f37767457686419971","parentSourceFingerprint":"ebb4eff27ebaec1cb21f259da3c466849411581585ab94e88eab2d2aa4b29f5c","parentRuntimePayloadFingerprint":"eba876b5b48f9e72f84ba452c00912508959edfa63eac94b23e0685d03d3b8e9","scope":"RUNTIME_HTML_BELOW_CANVAS_SERVICE_CONTROLS_ONLY","publicFooterVersion":"M.WebRelease.version","fullScreenRetainedByDesigner":true,"touchControlsPreserved":true,"AudioPolishPreserved":true,"T1Unchanged":true,"sourceFingerprint":"8aad19c33393f0e476d6e8729c844ee1a74d9734b270c50b02da3d0385d5148e","inputFingerprint":"8aad19c33393f0e476d6e8729c844ee1a74d9734b270c50b02da3d0385d5148e","id":"10.0.38-C2-F3-P3-F1-P1-1-P1-2-INTRO-P1-5-F1-FINAL-UI-WEB"});M.Multiplayer.version='10.0.38-C2-F3-P3-F1-WEB';M.Multiplayer.build='PZ-1038-C2F3-P3F1-AUTOFIRE-WEB';})(MARE);
 ;
 "use strict";
 
@@ -106334,6 +106331,7 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
   let last = performance.now(),
     acc = 0;
   M.manual = false;
+  document.getElementById('public-release').textContent = 'G-VIBE DEV · PROJECT Z · WEB / HTML5 · v' + M.WebRelease.version;
   function frame(now) {
     const dt = Math.min(.1, (now - last) / 1000);
     last = now;
@@ -106347,38 +106345,11 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
       }
       M.game.audio.update(['play', 'stageIntro'].includes(M.game.state), M.game.boss, M.game.state === 'practice_menu' ? 'title' : M.game.state === 'help' ? ['title', 'practice_menu'].includes(M.game.returnState) ? 'title' : 'pause' : M.game.state);
       document.body.classList.toggle('booting', M.presentation.phase === 'gate');
-      const replay = document.getElementById('replay-intro');
-      replay.hidden = M.game.state !== 'title';
       if (!M.menuReady) {
         M.presentation.drawBackdrop(M.game.ctx);
         requestAnimationFrame(frame);
         return;
       }
-      const auto = document.getElementById('auto'),
-        autoText = 'AUTO ' + (M.game.autofire ? 'ON' : 'OFF');
-      if (auto.textContent !== autoText) {
-        auto.textContent = autoText;
-        auto.setAttribute('aria-pressed', String(M.game.autofire));
-      }
-      const autoP2 = document.getElementById('auto-p2');
-      if (autoP2) {
-        autoP2.hidden = M.game.session?.mode !== 'local_coop';
-        autoP2.textContent = 'AUTO P2 ' + (M.game.players[1]?.autofire ? 'ON' : 'OFF');
-        autoP2.setAttribute('aria-pressed', String(!!M.game.players[1]?.autofire));
-      }
-      const pad = document.getElementById('pad-status'),
-        padText = input.padConnected ? 'PAD CONNECTED' : 'PAD: PRESS A BUTTON';
-      if (pad.textContent !== padText) pad.textContent = padText;
-      const practice = document.getElementById('practice-button');
-      practice.hidden = !['title', 'practice_menu'].includes(M.game.state);
-      const title = document.getElementById('title-button'),
-        hideTitle = !M.game.state.startsWith('menu_') && !['pause', 'over', 'clear', 'practice_menu', 'practice_over', 'practice_complete', 'music_player', 'fighter_down_pause', 'fighter_down_failed', 'fighter_down_win'].includes(M.game.state);
-      if (title.hidden !== hideTitle) title.hidden = hideTitle;
-      const start = document.getElementById('start'),
-        startText = M.game.state === 'fighter_down_intro' ? 'SKIP CINEMATIC' : M.game.state === 'fighter_down_play' ? 'FIRE' : M.game.state === 'fighter_down_pause' ? 'RESUME' : M.game.state === 'fighter_down_failed' ? 'RETRY' : M.game.state === 'fighter_down_win' ? 'CONTINUE' : M.game.state.startsWith('menu_') ? 'SELECT' : M.game.state === 'title' && M.game.menuView !== 'mission' ? 'OPEN' : M.game.state === 'music_player' ? M.game.soundtrack.playing ? 'PAUSE' : 'PLAY' : M.game.state === 'pause' ? 'RESUME' : M.game.state === 'over' ? 'CONTINUE' : M.game.state === 'clear' ? M.campaignFighterDownDue(M.game) ? 'FIGHTER DOWN' : M.NEXT_STAGE[M.game.stage.def.id] ? 'NEXT STAGE' : 'TITLE' : M.game.state === 'practice_menu' ? 'SELECT' : M.game.state.startsWith('practice_') ? 'PRACTICE' : 'START';
-      if (start.textContent !== startText) start.textContent = startText;
-      const hint = document.querySelector('footer .hint');
-      hint.textContent = M.ControlsR2A ? M.ControlsR2A.footerText(M.game) : M.game.state.startsWith('fighter_down_') ? 'MOUSE / DRAG AIM - CLICK / TAP / SPACE FIRE - P PAUSE' : 'ARROWS/WASD MOVE Ã‚Â· SPACE FIRE Ã‚Â· X SUPPORT Ã‚Â· C BOMB Ã‚Â· SHIFT FOCUS Ã‚Â· F AUTO';
       M.game.draw();
       void 0;
     }
