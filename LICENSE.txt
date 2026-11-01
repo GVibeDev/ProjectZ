@@ -1,0 +1,64 @@
+PROJECT Z — PROPRIETARY RUNTIME LICENSE
+Version 1.0 — 1 November 2026
+
+Copyright (c) 2026 G-VIBE DEV.
+All rights reserved except as expressly granted below.
+
+1. SCOPE AND OWNERSHIP
+
+These terms apply to the Project Z HTML5 Runtime and accompanying material
+distributed by G-VIBE DEV, including the bundled code, game text, graphics,
+audio and video, to the extent that G-VIBE DEV holds the relevant rights.
+Ownership is not transferred. This is not an open-source license.
+
+Separately licensed third-party material and public-domain material are
+excluded from any claim of exclusive ownership under these terms.
+
+2. PERMITTED PLAY AND TESTING
+
+G-VIBE DEV grants you a non-exclusive, royalty-free license to access,
+download and run the unmodified Runtime for personal, non-commercial play
+and testing. You may retain private copies needed for that use, including
+ordinary browser caching and a personal backup.
+
+You may share links to the official game pages and submit bug reports or
+feedback. This permission does not authorize distribution of game copies
+or separate reuse of game material.
+
+3. RIGHTS RESERVED
+
+Except as permitted by applicable law, the platform terms described below,
+or a separate license for particular material, you need prior written
+permission from G-VIBE DEV to modify, redistribute, rehost, sublicense,
+sell or commercially exploit the Runtime or its original components, or
+to reuse them in another product or create derivative works from them.
+
+No trademark or endorsement rights are granted. For additional permission,
+contact G-VIBE DEV through https://gvibedev.itch.io/projectz.
+
+4. PLATFORM TERMS AND LEGAL EXCEPTIONS
+
+These terms do not restrict rights already granted to GitHub and its users
+under the GitHub Terms of Service, including viewing and forking a public
+repository through GitHub's supported functionality. Those platform rights
+do not by themselves grant an unrestricted license outside their scope.
+
+Nothing here restricts rights or exceptions that cannot lawfully be
+excluded, or permissions granted by a separate third-party license.
+
+5. THIRD-PARTY MATERIAL
+
+Third-party material retains its original terms, which prevail for that
+material over conflicting restrictions in this document. See
+THIRD_PARTY_NOTICES.md. In particular, the CC0 dedication of the AVA font
+is not restricted or replaced by this proprietary Runtime license.
+
+6. WARRANTY AND LIABILITY
+
+To the extent permitted by applicable law, the Runtime is provided "as is"
+and "as available", without warranties of merchantability, fitness for a
+particular purpose or uninterrupted operation. To that same extent,
+G-VIBE DEV is not liable for loss or damage arising from its use.
+
+Nothing in this section excludes mandatory consumer rights or liability
+that cannot lawfully be limited or excluded.
