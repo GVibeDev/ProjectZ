@@ -90919,7 +90919,15 @@ MARE.DreadnoughtArmHitboxes = {
       g.playerAttack = previous;
     }
   };
-  M.shieldOwners = g => g.boss?.members ? g.boss.members.filter(b => !exempt(b)) : g.boss && !exempt(g.boss) ? [g.boss] : [];
+  const castorRetired = b => b?.kind === 'castor' && (!b.ready || b.dead || b.removed || b.hp <= 0);
+  function retireCastorShield(b) {
+    const s = b.shield06;
+    if (!s) return;
+    s.active = false;
+    s.remaining = s.cooldown = 0;
+    s.continuousStart = s.lastHit = null;
+  }
+  M.shieldOwners = g => g.boss?.members ? g.boss.members.filter(b => !exempt(b) && !castorRetired(b)) : g.boss && !exempt(g.boss) ? [g.boss] : [];
   function bounds(b) {
     let zones = b.memberParent ? [{
       x: b.x,
@@ -91020,11 +91028,12 @@ MARE.DreadnoughtArmHitboxes = {
   };
   function activate(b, g, phase = false) {
     const s = b.shield06;
-    if (!s) return;
+    if (!s || castorRetired(b)) return;
     if (!s.active) {
       M.audioEventG?.(g, b, 'shield', 'shield', 'base');
       if (b.kind === 'z_overlord' && !exempt(b)) b.overlordShieldVisualUntilS5B2 = g.elapsed + 2 * M.difficulty07(g).speed;
     }
+    if (castorRetired(b)) return;
     s.active = true;
     s.phaseRegime = phase || b.phase > 1;
     s.remaining = s.phaseRegime ? 30 : 15;
@@ -91112,9 +91121,20 @@ MARE.DreadnoughtArmHitboxes = {
     };
     wrapDamage(b, b);
     for (const arm of b.dreadArms || []) wrapDamage(arm, b);
+    if (b.kind === 'castor') {
+      const death = b.beginDeath;
+      b.beginDeath = function (...args) {
+        retireCastorShield(this);
+        return death.apply(this, args);
+      };
+    }
     const update = b.update;
     b.update = function (dt, g) {
       const s = this.shield06;
+      if (castorRetired(this)) {
+        retireCastorShield(this);
+        return update.call(this, dt, g);
+      }
       if (s.active) {
         s.remaining = Math.max(0, s.remaining - dt);
         s.rotation = M.trackShieldRotation12 ? M.trackShieldRotation12(this, g, dt, s.phaseRegime ? 20 : 10) : (s.rotation + dt * (s.phaseRegime ? 20 : 10)) % 360;
@@ -106287,7 +106307,7 @@ globalThis.ProjectZLoadoutContractR2B = Object.freeze({
   };
 })(MARE);
 
-;(function(M){M.version='Project Z / 10.0.38-C2-F3-P3-F1-P1-1-P1-2-INTRO-P1-5-F1-FINAL-UI - CANDIDATE';M.WebRelease=Object.freeze({"version":"10.0.38-C2-F3-P3-F1-P1-1-P1-2-INTRO-P1-5-F1-FINAL-UI","status":"CANDIDATE_TEST_ONLY_NOT_DESIGNER_VALIDATED","officialParent":"10.0.38-C2-F3-P3-F1-P1-1-P1-2-INTRO-P1-5-F1","parentDEVCommit":"c8ae8c69d5e733ae682dcf13e66a96841262d80d","parentRuntimeCommit":"b918b50a3515d0bfee55a3f37767457686419971","parentSourceFingerprint":"ebb4eff27ebaec1cb21f259da3c466849411581585ab94e88eab2d2aa4b29f5c","parentRuntimePayloadFingerprint":"eba876b5b48f9e72f84ba452c00912508959edfa63eac94b23e0685d03d3b8e9","scope":"RUNTIME_HTML_BELOW_CANVAS_SERVICE_CONTROLS_ONLY","publicFooterVersion":"M.WebRelease.version","fullScreenRetainedByDesigner":true,"touchControlsPreserved":true,"AudioPolishPreserved":true,"T1Unchanged":true,"sourceFingerprint":"8aad19c33393f0e476d6e8729c844ee1a74d9734b270c50b02da3d0385d5148e","inputFingerprint":"8aad19c33393f0e476d6e8729c844ee1a74d9734b270c50b02da3d0385d5148e","id":"10.0.38-C2-F3-P3-F1-P1-1-P1-2-INTRO-P1-5-F1-FINAL-UI-WEB"});M.Multiplayer.version='10.0.38-C2-F3-P3-F1-WEB';M.Multiplayer.build='PZ-1038-C2F3-P3F1-AUTOFIRE-WEB';})(MARE);
+;(function(M){M.version='Project Z / 10.0.38-C2-F3-P3-F1-P1-1-P1-2-INTRO-P1-5-F1-FINAL-UI-R1 - CANDIDATE';M.WebRelease=Object.freeze({"version":"10.0.38-C2-F3-P3-F1-P1-1-P1-2-INTRO-P1-5-F1-FINAL-UI-R1","status":"CANDIDATE_TEST_ONLY_NOT_DESIGNER_VALIDATED","parentCandidate":"10.0.38-C2-F3-P3-F1-P1-1-P1-2-INTRO-P1-5-F1-FINAL-UI","parentDEVFingerprint":"8aad19c33393f0e476d6e8729c844ee1a74d9734b270c50b02da3d0385d5148e","parentRuntimeFingerprint":"c4da311cacb29fff71093cf841302251aab7e3daf42f792050068c194a7e3407","parentRuntimePublicCommit":"1feb0e3c1406a35c8afcab0b32ff11d49a8202c0","officialBaseline":"10.0.38-C2-F3-P3-F1-P1-1-P1-2-INTRO-P1-5-F1","officialDEVCommit":"c8ae8c69d5e733ae682dcf13e66a96841262d80d","officialRuntimeCommit":"b918b50a3515d0bfee55a3f37767457686419971","scope":"CASTOR_SHIELD_LIFECYCLE_ONLY_R1A_DIAGNOSIS_SEPARATE","R1A":"NO_SPECULATIVE_FIX","R1B":"CASTOR_SHIELD_RETIRED_AT_OWNER_DEATH","FinalUIPreserved":true,"assetsChanged":0,"sourceFingerprint":"3fe56804473a2ae66a4c2cbcdf2dbd31aa4cf755b2f27f11c697ccd7ab189527","inputFingerprint":"3fe56804473a2ae66a4c2cbcdf2dbd31aa4cf755b2f27f11c697ccd7ab189527","id":"10.0.38-C2-F3-P3-F1-P1-1-P1-2-INTRO-P1-5-F1-FINAL-UI-R1-WEB"});M.Multiplayer.version='10.0.38-C2-F3-P3-F1-WEB';M.Multiplayer.build='PZ-1038-C2F3-P3F1-AUTOFIRE-WEB';})(MARE);
 ;
 "use strict";
 
